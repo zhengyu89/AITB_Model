@@ -1,0 +1,12 @@
+torch
+torchvision
+transformers
+faiss-cpu
+opencv-python
+Pillow
+numpy
+tqdm
+qdrant-client
+albumentations
+streamlit
+pandas

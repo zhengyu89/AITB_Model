@@ -1,0 +1,28 @@
+[
+    {
+        "image_path": "https://cdn.myapp.com/melaka/christ_church_001.jpg",
+        "thumbnail_path": "https://cdn.myapp.com/melaka/thumbs/christ_church_001.jpg",
+        "class_name": "melaka_christ_church",
+        "display_name": "Christ Church Melaka",
+        "city": "melaka",
+        "state": "melaka_state",
+        "country": "malaysia",
+        "lat": 2.1922,
+        "lon": 102.2495,
+        "coverage_radius_m": 300,
+        "is_reference": true,
+        "tags": [
+            "church",
+            "red_building",
+            "historic",
+            "tourist_spot"
+        ],
+        "source": {
+            "provider": "wikimedia",
+            "license": "cc-by-sa-4.0",
+            "source_id": "file:abc123"
+        },
+        "created_at": "2025-10-01T12:00:00Z",
+        "note": "high-quality reference image, frontal view"
+    }
+]

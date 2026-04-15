@@ -1,0 +1,60 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Sequence
+
+import numpy as np
+import torch
+from PIL import Image, ImageOps
+
+
+DEFAULT_MODEL_NAME = "facebook/dinov2-base"
+SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+class DinoV2Embedder:
+    def __init__(self, model_name: str = DEFAULT_MODEL_NAME, device: str | None = None):
+        try:
+            from transformers import AutoImageProcessor, AutoModel
+        except ImportError as exc:
+            raise SystemExit(
+                "transformers is not installed. Run `./venv/bin/pip install -r requirements.txt` first."
+            ) from exc
+
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.model_name = model_name
+        self.processor = load_with_local_fallback(AutoImageProcessor, model_name)
+        self.model = load_with_local_fallback(AutoModel, model_name).to(self.device)
+        self.model.eval()
+        self.embedding_dim = int(self.model.config.hidden_size)
+
+    def embed_path(self, image_path: str | Path) -> np.ndarray:
+        return self.embed_paths([image_path])[0]
+
+    def embed_paths(self, image_paths: Sequence[str | Path]) -> np.ndarray:
+        images = [load_image_rgb(path) for path in image_paths]
+        return self.embed_pil_images(images)
+
+    def embed_pil_images(self, images: Sequence[Image.Image]) -> np.ndarray:
+        inputs = self.processor(images=list(images), return_tensors="pt")
+        inputs = {key: value.to(self.device) for key, value in inputs.items()}
+
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+            embeddings = outputs.last_hidden_state[:, 0]
+            embeddings = torch.nn.functional.normalize(embeddings, dim=1)
+
+        return embeddings.cpu().numpy().astype("float32")
+
+
+def load_image_rgb(path: str | Path) -> Image.Image:
+    with Image.open(path) as image:
+        image = ImageOps.exif_transpose(image)
+        return image.convert("RGB")
+
+
+def load_with_local_fallback(loader_cls, model_name: str):
+    try:
+        return loader_cls.from_pretrained(model_name)
+    except OSError:
+        return loader_cls.from_pretrained(model_name, local_files_only=True)
