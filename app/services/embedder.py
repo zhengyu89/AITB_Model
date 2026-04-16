@@ -8,7 +8,7 @@ import torch
 from PIL import Image, ImageOps
 
 
-DEFAULT_MODEL_NAME = "facebook/dinov2-base"
+DEFAULT_MODEL_NAME = "facebook/dinov2-large"
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
@@ -23,8 +23,8 @@ class DinoV2Embedder:
 
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model_name = model_name
-        self.processor = load_with_local_fallback(AutoImageProcessor, model_name)
-        self.model = load_with_local_fallback(AutoModel, model_name).to(self.device)
+        self.processor = _load_with_local_fallback(AutoImageProcessor, model_name)
+        self.model = _load_with_local_fallback(AutoModel, model_name).to(self.device)
         self.model.eval()
         self.embedding_dim = int(self.model.config.hidden_size)
 
@@ -53,7 +53,14 @@ def load_image_rgb(path: str | Path) -> Image.Image:
         return image.convert("RGB")
 
 
-def load_with_local_fallback(loader_cls, model_name: str):
+def pil_to_rgb(image: Image.Image) -> Image.Image:
+    image = ImageOps.exif_transpose(image)
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+    return image
+
+
+def _load_with_local_fallback(loader_cls, model_name: str):
     try:
         return loader_cls.from_pretrained(model_name)
     except OSError:

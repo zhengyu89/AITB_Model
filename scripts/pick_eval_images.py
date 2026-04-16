@@ -12,19 +12,32 @@ import shutil
 import sys
 from pathlib import Path
 
-_SCRIPTS_DIR = Path(__file__).resolve().parent
-_REPO_ROOT = _SCRIPTS_DIR.parent
-if str(_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS_DIR))
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-from build_index import collect_class_dirs
-from dinov2_embedder import SUPPORTED_EXTENSIONS
+from app.services.embedder import SUPPORTED_EXTENSIONS
+
+EVAL_OUT_DIR = _REPO_ROOT / "data" / "test" / "eval_picks"
+
+
+def collect_class_dirs(data_dir: Path) -> list[Path]:
+    class_dirs = []
+    for path in sorted(data_dir.rglob("*")):
+        if not path.is_dir():
+            continue
+        has_images = any(
+            child.is_file() and child.suffix.lower() in SUPPORTED_EXTENSIONS
+            for child in path.iterdir()
+        )
+        if has_images:
+            class_dirs.append(path)
+    return class_dirs
 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Sample images from data/reference for manual evaluation.")
     p.add_argument("--data-dir", type=Path, default=_REPO_ROOT / "data" / "reference")
-    p.add_argument("--out-dir", type=Path, default=_REPO_ROOT / "data" / "test" / "eval_picks")
     p.add_argument(
         "--per-class",
         type=int,
@@ -38,7 +51,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     random.seed(args.seed)
-    args.out_dir.mkdir(parents=True, exist_ok=True)
+    EVAL_OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     manifest: list[dict] = []
     for class_dir in collect_class_dirs(args.data_dir):
@@ -53,7 +66,7 @@ def main() -> int:
         k = min(args.per_class, len(files))
         chosen = random.sample(files, k) if k < len(files) else list(files)
         for src in chosen:
-            dest_dir = args.out_dir / rel
+            dest_dir = EVAL_OUT_DIR / rel
             dest_dir.mkdir(parents=True, exist_ok=True)
             dest = dest_dir / src.name
             shutil.copy2(src, dest)
@@ -65,9 +78,9 @@ def main() -> int:
                 }
             )
 
-    meta_path = args.out_dir / "manifest.json"
+    meta_path = EVAL_OUT_DIR / "manifest.json"
     meta_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Copied {len(manifest)} file(s) under {args.out_dir}")
+    print(f"Copied {len(manifest)} file(s) under {EVAL_OUT_DIR}")
     print("Manifest:", meta_path)
     return 0
 

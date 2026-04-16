@@ -2,13 +2,14 @@
 Train a small classifier on top of frozen DINOv2 embeddings (linear probe).
 Produces a customer-deliverable checkpoint, e.g. my_landmark.pth.
 
-You still use DINOv2 for features; only the final linear layer is "your trained model".
-Inference lives in landmark_inference.py (Web UI / import from there).
+You still use DINOv2 for features; only the final linear layer is your trained model.
+The saved .pth is a classifier head checkpoint, not a standalone embedding model.
+
 Run from repo root:  python scripts/train_landmark_head.py
   Attractions only (recommended if food/ confuses landscapes):
-  python scripts/train_landmark_head.py --subset-prefix attraction --out my_landmark_attraction.pth
-  Binary router (attraction vs food) for Web UI fallback:
-  python scripts/train_landmark_head.py --router --out my_landmark_router.pth
+  python scripts/train_landmark_head.py --subset-prefix attraction
+  Food only:
+  python scripts/train_landmark_head.py --subset-prefix food
 """
 from __future__ import annotations
 
@@ -18,18 +19,16 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_SCRIPTS_DIR = Path(__file__).resolve().parent
-if str(_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS_DIR))
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from dinov2_embedder import DinoV2Embedder
+from app.config import get_embedding_model_name
+from app.services.embedder import SUPPORTED_EXTENSIONS, DinoV2Embedder
 
-DEFAULT_MODEL_NAME = "facebook/dinov2-base"
-SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 def collect_class_dirs(data_dir: Path) -> list[Path]:
     class_dirs = []
@@ -56,24 +55,6 @@ def filter_class_dirs(class_dirs: list[Path], data_dir: Path, subset_prefix: str
     return out
 
 
-def collect_router_samples(data_dir: Path) -> list[tuple[Path, str, str, int]]:
-    """Label 0 = attraction, 1 = food from first path segment under data_dir."""
-    samples: list[tuple[Path, str, str, int]] = []
-    for class_dir in collect_class_dirs(data_dir):
-        rel = class_dir.relative_to(data_dir).as_posix()
-        top = rel.split("/")[0]
-        if top == "attraction":
-            idx = 0
-        elif top == "food":
-            idx = 1
-        else:
-            continue
-        for image_path in sorted(class_dir.iterdir()):
-            if image_path.is_file() and image_path.suffix.lower() in SUPPORTED_EXTENSIONS:
-                samples.append((image_path, top, top, idx))
-    return samples
-
-
 def collect_samples_for_class_dirs(
     data_dir: Path, class_dirs: list[Path]
 ) -> list[tuple[Path, str, str, int]]:
@@ -92,16 +73,14 @@ def collect_samples_for_class_dirs(
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Train a linear head on frozen DINOv2 embeddings; save my_landmark.pth."
+        description="Train a linear head on frozen DINOv2 embeddings; save a fixed checkpoint name."
     )
     p.add_argument("--data-dir", type=Path, default=_REPO_ROOT / "data" / "reference")
-    p.add_argument("--out", type=Path, default=_REPO_ROOT / "my_landmark.pth")
     p.add_argument("--epochs", type=int, default=8)
     p.add_argument("--batch-size", type=int, default=32)
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--val-ratio", type=float, default=0.1)
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--model-name", type=str, default=DEFAULT_MODEL_NAME)
     p.add_argument("--device", type=str, default=None)
     p.add_argument(
         "--subset-prefix",
@@ -110,46 +89,43 @@ def parse_args() -> argparse.Namespace:
         metavar="PREFIX",
         help="Only train on classes under this path prefix, e.g. 'attraction' excludes food/ from the same softmax.",
     )
-    p.add_argument(
-        "--router",
-        action="store_true",
-        help="Train a 2-way attraction vs food head (class_paths: attraction, food). Do not use with --subset-prefix.",
-    )
     return p.parse_args()
+
+
+def resolve_output_path(subset_prefix: str | None) -> Path:
+    if subset_prefix is None:
+        raise SystemExit("subset-prefix is required and must be either 'attraction' or 'food'.")
+
+    normalized = subset_prefix.strip("/").replace("\\", "/").rstrip("/")
+    if normalized == "attraction":
+        return _REPO_ROOT / "my_landmark_attraction.pth"
+    if normalized == "food":
+        return _REPO_ROOT / "my_landmark_food.pth"
+    raise SystemExit("subset-prefix must be exactly 'attraction' or 'food'.")
 
 
 def main() -> int:
     args = parse_args()
+    embedding_model_name = get_embedding_model_name()
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
-
-    if args.router and args.subset_prefix:
-        raise SystemExit("Use either --router or --subset-prefix, not both.")
+    out_path = resolve_output_path(args.subset_prefix)
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)
 
-    if args.router:
-        samples = collect_router_samples(args.data_dir)
-        if not samples:
-            raise SystemExit(
-                f"No attraction/food images under {args.data_dir} (need top-level folders attraction/ and food/)."
-            )
-        class_paths = ["attraction", "food"]
-        num_classes = 2
-    else:
-        class_dirs = filter_class_dirs(collect_class_dirs(args.data_dir), args.data_dir, args.subset_prefix)
-        if not class_dirs:
-            raise SystemExit(
-                f"No classes after filter under {args.data_dir}"
-                + (f" (subset-prefix={args.subset_prefix!r})" if args.subset_prefix else "")
-            )
+    class_dirs = filter_class_dirs(collect_class_dirs(args.data_dir), args.data_dir, args.subset_prefix)
+    if not class_dirs:
+        raise SystemExit(
+            f"No classes after filter under {args.data_dir}"
+            + (f" (subset-prefix={args.subset_prefix!r})" if args.subset_prefix else "")
+        )
 
-        samples = collect_samples_for_class_dirs(args.data_dir, class_dirs)
-        if not samples:
-            raise SystemExit(f"No images in filtered classes under {args.data_dir}")
+    samples = collect_samples_for_class_dirs(args.data_dir, class_dirs)
+    if not samples:
+        raise SystemExit(f"No images in filtered classes under {args.data_dir}")
 
-        class_paths = [str(d.relative_to(args.data_dir)) for d in class_dirs]
-        num_classes = len(class_paths)
+    class_paths = [str(d.relative_to(args.data_dir)) for d in class_dirs]
+    num_classes = len(class_paths)
 
     indices = list(range(len(samples)))
     random.shuffle(indices)
@@ -158,7 +134,7 @@ def main() -> int:
     train_samples = [samples[i] for i in indices if i not in val_idx]
     val_samples = [samples[i] for i in indices if i in val_idx]
 
-    embedder = DinoV2Embedder(model_name=args.model_name, device=device)
+    embedder = DinoV2Embedder(model_name=embedding_model_name, device=device)
     for param in embedder.model.parameters():
         param.requires_grad = False
 
@@ -215,15 +191,14 @@ def main() -> int:
         "head_state_dict": head.state_dict(),
         "class_paths": class_paths,
         "class_path_to_idx": {p: i for i, p in enumerate(class_paths)},
-        "dinov2_model_name": args.model_name,
+        "dinov2_model_name": embedding_model_name,
         "embedding_dim": embedder.embedding_dim,
         "num_classes": num_classes,
         "data_dir_relative": str(args.data_dir),
-        "subset_prefix": None if args.router else args.subset_prefix,
-        "router": bool(args.router),
+        "subset_prefix": args.subset_prefix,
     }
-    torch.save(payload, args.out)
-    print("Saved:", args.out.resolve())
+    torch.save(payload, out_path)
+    print("Saved:", out_path.resolve())
     return 0
 
 
