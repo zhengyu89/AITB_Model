@@ -20,7 +20,7 @@ from app.config import get_embedding_model_name
 from app.services.embedder import SUPPORTED_EXTENSIONS, DinoV2Embedder
 
 
-COLLECTION = "malaysia_landmarks_dinov2"
+COLLECTION = "malaysia_landmarks"
 DATA_DIR = Path("data/reference")
 ATTRACTIONS_CSV = Path("attractions200226.csv")
 BATCH_UPSERT = 32

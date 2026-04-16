@@ -11,7 +11,7 @@ from app.services.embedder import DEFAULT_MODEL_NAME
 class Settings:
     embedding_model_name: str = os.getenv("EMBEDDING_MODEL_NAME", DEFAULT_MODEL_NAME)
     qdrant_url: str = os.getenv("QDRANT_URL", "http://localhost:6333")
-    qdrant_collection: str = os.getenv("QDRANT_COLLECTION", "malaysia_landmarks_dinov2")
+    qdrant_collection: str = os.getenv("QDRANT_COLLECTION", "malaysia_landmarks")
     attraction_checkpoint: Path = Path(
         os.getenv("ATTRACTION_CHECKPOINT", "my_landmark_attraction.pth")
     )

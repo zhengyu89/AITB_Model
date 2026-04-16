@@ -29,7 +29,7 @@ from qdrant_client import QdrantClient
 
 
 DEFAULT_QDRANT_URL = "http://localhost:6333"
-DEFAULT_COLLECTION = "malaysia_landmarks_dinov2"
+DEFAULT_COLLECTION = "malaysia_landmarks"
 DEFAULT_ACCEPT_SCORE = 0.40
 DEFAULT_TENTATIVE_SCORE = 0.28
 DEFAULT_MIN_GAP = 0.03
