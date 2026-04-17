@@ -131,12 +131,23 @@ Make sure the same DINO backbone is used everywhere:
 uvicorn app.main:app --reload
 ```
 
+Or use the short launcher from the repo root:
+
+```bash
+python main.py
+```
+
 Default environment variables:
 
 - `ATTRACTION_CHECKPOINT=my_landmark_attraction.pth`
 - `FOOD_CHECKPOINT=my_landmark_food.pth`
 - `QDRANT_URL=http://localhost:6333`
 - `QDRANT_COLLECTION=malaysia_landmarks`
+- `API_KEY=` (optional; when set, send it via the `X-API-Key` header)
+- `UVICORN_HOST=0.0.0.0`
+- `UVICORN_PORT=8000`
+- `UVICORN_RELOAD=true`
+- `UVICORN_LOG_LEVEL=info`
 
 ### Run Streamlit
 
