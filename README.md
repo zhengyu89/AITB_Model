@@ -149,6 +149,18 @@ Default environment variables:
 - `UVICORN_RELOAD=true`
 - `UVICORN_LOG_LEVEL=info`
 
+Public routes:
+
+- `GET /health`
+
+Protected API routes:
+
+- `GET /api/v1/`
+- `POST /api/v1/predict/`
+- `POST /api/v1/predict/upload`
+- `GET /api/v1/docs`
+- `GET /api/v1/openapi.json`
+
 ### Run Streamlit
 
 ```bash
