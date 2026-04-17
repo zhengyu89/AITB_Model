@@ -9,3 +9,4 @@ pandas
 fastapi
 uvicorn
 python-multipart
+albumentations
