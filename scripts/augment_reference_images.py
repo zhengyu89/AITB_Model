@@ -7,6 +7,7 @@ import os
 import random
 import sys
 from pathlib import Path
+from typing import TypedDict
 
 import cv2
 import numpy as np
@@ -32,6 +33,14 @@ DEFAULT_MIN_CLASS_OUTPUTS = 80
 DEFAULT_MAX_CLASS_OUTPUTS = 150
 DEFAULT_LARGE_CLASS_THRESHOLD = 100
 DEFAULT_LARGE_CLASS_SAMPLE_SIZE = 15
+
+
+class ClassPlan(TypedDict):
+    class_dir: Path
+    original_count: int
+    sampled_count: int
+    target_output_count: int
+    jobs: list[tuple[Path, str, int]]
 
 
 def parse_args() -> argparse.Namespace:
@@ -146,17 +155,21 @@ def build_pipelines(enable_horizontal_flip: bool) -> dict[str, A.Compose]:
 def make_gauss_noise():
     params = inspect.signature(A.GaussNoise).parameters
     if "var_limit" in params:
-        return A.GaussNoise(var_limit=(10.0, 50.0), p=0.2)
+        kwargs = {"var_limit": (10.0, 50.0), "p": 0.2}
+        return A.GaussNoise(**kwargs)
     if "std_range" in params:
-        return A.GaussNoise(std_range=(0.02, 0.08), mean_range=(0.0, 0.0), p=0.2)
+        kwargs = {"std_range": (0.02, 0.08), "mean_range": (0.0, 0.0), "p": 0.2}
+        return A.GaussNoise(**kwargs)
     return A.GaussNoise(p=0.2)
 
 
 def make_image_compression():
     params = inspect.signature(A.ImageCompression).parameters
     if "quality_range" in params:
-        return A.ImageCompression(quality_range=(70, 100), p=0.3)
-    return A.ImageCompression(quality_lower=70, quality_upper=100, p=0.3)
+        kwargs = {"quality_range": (70, 100), "p": 0.3}
+        return A.ImageCompression(**kwargs)
+    kwargs = {"quality_lower": 70, "quality_upper": 100, "p": 0.3}
+    return A.ImageCompression(**kwargs)
 
 
 def collect_images(input_dir: Path) -> list[Path]:
@@ -189,8 +202,8 @@ def build_class_plans(
     images_by_directory: dict[Path, list[Path]],
     args: argparse.Namespace,
     rng: random.Random,
-) -> list[dict[str, object]]:
-    class_plans: list[dict[str, object]] = []
+) -> list[ClassPlan]:
+    class_plans: list[ClassPlan] = []
 
     for class_dir in sorted(images_by_directory):
         source_images = sorted(images_by_directory[class_dir])
@@ -310,8 +323,9 @@ def main() -> int:
 
     random.seed(args.seed)
     np.random.seed(args.seed)
-    if hasattr(A, "set_seed"):
-        A.set_seed(args.seed)
+    set_seed = getattr(A, "set_seed", None)
+    if callable(set_seed):
+        set_seed(args.seed)
     rng = random.Random(args.seed)
 
     all_image_paths = collect_images(args.input_dir)

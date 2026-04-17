@@ -59,6 +59,8 @@ def _csv_aliases(name: str) -> set[str]:
 def _to_float(value: object) -> float | None:
     if value in (None, ""):
         return None
+    if not isinstance(value, (int, float, str)):
+        return None
     try:
         return float(value)
     except (TypeError, ValueError):
