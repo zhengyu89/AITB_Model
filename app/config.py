@@ -12,9 +12,7 @@ class Settings:
     embedding_model_name: str = os.getenv("EMBEDDING_MODEL_NAME", DEFAULT_MODEL_NAME)
     qdrant_url: str = os.getenv("QDRANT_URL", "http://localhost:6333")
     qdrant_collection: str = os.getenv("QDRANT_COLLECTION", "malaysia_landmarks")
-    attraction_checkpoint: Path = Path(
-        os.getenv("ATTRACTION_CHECKPOINT", "my_landmark_attraction.pth")
-    )
+    attraction_checkpoint: Path = Path(os.getenv("ATTRACTION_CHECKPOINT", "my_landmark_attraction.pth"))
     food_checkpoint: Path = Path(os.getenv("FOOD_CHECKPOINT", "my_landmark_food.pth"))
     default_device: str | None = os.getenv("MODEL_DEVICE") or None
     default_topk: int = int(os.getenv("DEFAULT_TOPK", "5"))
