@@ -194,5 +194,5 @@ python scripts/pick_eval_images.py --per-class 2 --seed 42
 - The attraction and food classifier scores should not be compared directly across models.
 - A linear probe checkpoint is **not** a replacement backbone.
 - If you ever want the trained model itself to produce retrieval embeddings, that would require a different training strategy such as backbone fine-tuning or metric learning.
-- GPS-aware lookup now prefers Qdrant native geo filtering on `location: {lat, lon}` and falls back to Python-side distance filtering only for older points that may still carry plain `lat` / `lon` fields.
-- New ingested points store a dedicated `location` object instead of separate `lat` and `lon` payload keys.
+- GPS-aware lookup now uses `location: {lat, lon}` to compute candidate distance and prefer the nearest recognized result when coordinates are available.
+- New ingested points store a dedicated `location` object. Radius-based filtering is no longer used.

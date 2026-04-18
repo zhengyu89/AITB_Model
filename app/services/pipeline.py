@@ -16,7 +16,7 @@ from app.services.classifier import (
     resolve_checkpoint_path,
 )
 from app.services.embedder import DinoV2Embedder
-from app.services.qdrant_retrieval import aggregate_qdrant_results, filter_rows_by_geo, qdrant_topk
+from app.services.qdrant_retrieval import aggregate_qdrant_results, qdrant_topk, rank_rows_by_geo_distance
 
 
 @dataclass
@@ -77,7 +77,6 @@ def predict_image(
     topk: int,
     user_lat: float | None = None,
     user_lon: float | None = None,
-    user_radius_m: float | None = None,
     include_classification: bool = True,
     include_debug: bool = False,
 ) -> dict:
@@ -107,22 +106,17 @@ def predict_image(
     local_rows: list[dict] = []
     local_grouped: list[dict] = []
     used_scope = "global"
-    radius_m = user_radius_m if user_radius_m is not None else settings.default_user_radius_m
 
     if user_lat is not None and user_lon is not None:
-        local_rows = qdrant_topk(
-            client=bundle.qdrant_client,
-            collection=bundle.qdrant_collection,
-            query_vector=vector,
-            limit=max(topk, settings.global_search_limit),
-            user_lat=user_lat,
-            user_lon=user_lon,
-            user_radius_m=radius_m,
-        )
-        if not local_rows:
-            local_rows = filter_rows_by_geo(global_rows, user_lat, user_lon, radius_m)
+        local_rows = rank_rows_by_geo_distance(global_rows, user_lat, user_lon)
         local_grouped = aggregate_qdrant_results(local_rows)
-        if local_grouped and float(local_grouped[0]["best_score"]) >= settings.tentative_score:
+        if local_grouped:
+            local_grouped.sort(
+                key=lambda item: (
+                    item.get("best_distance_m") if item.get("best_distance_m") is not None else 1e18,
+                    -float(item.get("best_score") or 0.0),
+                )
+            )
             used_scope = "local"
 
     selected_rows = local_rows if used_scope == "local" else global_rows
@@ -150,7 +144,6 @@ def predict_image(
             "geo": {
                 "user_lat": user_lat,
                 "user_lon": user_lon,
-                "user_radius_m": radius_m,
                 "local_candidate_count": len(local_grouped),
                 "global_candidate_count": len(global_grouped),
             },

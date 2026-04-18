@@ -17,7 +17,6 @@ async def predict(request: PredictRequest) -> PredictResponse:
         topk=request.topk,
         user_lat=request.user_lat,
         user_lon=request.user_lon,
-        user_radius_m=request.user_radius_m,
         include_classification=request.include_classification,
         include_debug=request.include_debug,
     )
@@ -29,7 +28,6 @@ async def predict_upload(
     topk: int = Query(default=get_settings().default_topk, ge=1, le=20),
     user_lat: float | None = Query(default=None),
     user_lon: float | None = Query(default=None),
-    user_radius_m: float | None = Query(default=None, gt=0),
     include_classification: bool = Query(default=True),
     include_debug: bool = Query(default=False),
 ) -> PredictResponse:
@@ -44,7 +42,6 @@ async def predict_upload(
         topk=topk,
         user_lat=user_lat,
         user_lon=user_lon,
-        user_radius_m=user_radius_m,
         include_classification=include_classification,
         include_debug=include_debug,
     )
@@ -55,7 +52,6 @@ def _run_prediction(
     topk: int,
     user_lat: float | None,
     user_lon: float | None,
-    user_radius_m: float | None,
     include_classification: bool,
     include_debug: bool,
 ) -> PredictResponse:
@@ -66,7 +62,6 @@ def _run_prediction(
                 topk=topk,
                 user_lat=user_lat,
                 user_lon=user_lon,
-                user_radius_m=user_radius_m,
                 include_classification=include_classification,
                 include_debug=include_debug,
             )

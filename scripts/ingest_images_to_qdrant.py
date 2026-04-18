@@ -25,7 +25,6 @@ DATA_DIR = Path("data/reference")
 ATTRACTIONS_CSV = Path("attractions200226.csv")
 BATCH_UPSERT = 32
 QDRANT_URL = "http://localhost:6333"
-DEFAULT_COVERAGE_M = 500
 
 
 def parse_args() -> argparse.Namespace:
@@ -144,7 +143,6 @@ def collect_points(data_dir: Path, attraction_csv: Path):
                 "display_name": display_name,
                 "description": csv_meta.get("description"),
                 "location": csv_meta.get("location"),
-                "coverage_radius_m": class_meta.get("coverage_radius_m", DEFAULT_COVERAGE_M),
             }
             payload.update(class_meta)
             _normalize_location_fields(payload)

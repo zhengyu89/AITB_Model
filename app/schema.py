@@ -9,7 +9,6 @@ class PredictRequest(BaseModel):
     topk: int = Field(default_factory=lambda: get_settings().default_topk, ge=1, le=20)
     user_lat: float | None = Field(default=None, description="Optional user latitude.")
     user_lon: float | None = Field(default=None, description="Optional user longitude.")
-    user_radius_m: float | None = Field(default=None, gt=0, description="Optional local search radius in meters.")
     include_classification: bool = Field(default=True, description="Include attraction/food classifier summaries.")
     include_debug: bool = Field(default=False, description="Include debug-only fields.")
 

@@ -4,7 +4,7 @@ from collections import defaultdict
 import math
 
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import FieldCondition, Filter, GeoPoint, GeoRadius, MatchValue
+from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 
 def qdrant_topk(
@@ -13,21 +13,10 @@ def qdrant_topk(
     query_vector: list[float],
     limit: int,
     category: str | None = None,
-    user_lat: float | None = None,
-    user_lon: float | None = None,
-    user_radius_m: float | None = None,
-    geo_key: str = "location",
 ) -> list[dict]:
     conditions = []
     if category:
         conditions.append(FieldCondition(key="category", match=MatchValue(value=category)))
-    if user_lat is not None and user_lon is not None and user_radius_m is not None:
-        conditions.append(
-            FieldCondition(
-                key=geo_key,
-                geo_radius=GeoRadius(center=GeoPoint(lat=user_lat, lon=user_lon), radius=user_radius_m),
-            )
-        )
 
     query_filter = Filter(must=conditions) if conditions else None
 
@@ -67,19 +56,17 @@ def haversine_distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> 
     return radius * c
 
 
-def filter_rows_by_geo(
+def rank_rows_by_geo_distance(
     rows: list[dict],
     user_lat: float,
     user_lon: float,
-    user_radius_m: float,
 ) -> list[dict]:
-    filtered: list[dict] = []
+    ranked: list[dict] = []
     for row in rows:
         payload = row.get("payload") or {}
         location = payload.get("location") or {}
         lat = location.get("lat", payload.get("lat")) if isinstance(location, dict) else payload.get("lat")
         lon = location.get("lon", payload.get("lon")) if isinstance(location, dict) else payload.get("lon")
-        coverage = payload.get("coverage_radius_m")
         if lat is None or lon is None:
             continue
 
@@ -88,25 +75,17 @@ def filter_rows_by_geo(
         except (TypeError, ValueError):
             continue
 
-        accepted = distance_m <= float(user_radius_m)
-        if not accepted and coverage is not None:
-            try:
-                accepted = distance_m <= float(coverage)
-            except (TypeError, ValueError):
-                accepted = False
+        row_copy = row.copy()
+        row_copy["distance_m"] = distance_m
+        ranked.append(row_copy)
 
-        if accepted:
-            row_copy = row.copy()
-            row_copy["distance_m"] = distance_m
-            filtered.append(row_copy)
-
-    filtered.sort(
+    ranked.sort(
         key=lambda row: (
             row.get("distance_m") if row.get("distance_m") is not None else 1e18,
             -float(row.get("score") or 0.0),
         )
     )
-    return filtered
+    return ranked
 
 
 def aggregate_qdrant_results(rows: list[dict]) -> list[dict]:
