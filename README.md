@@ -139,8 +139,6 @@ python main.py
 
 Default environment variables:
 
-- `ATTRACTION_CHECKPOINT=my_landmark_attraction.pth`
-- `FOOD_CHECKPOINT=my_landmark_food.pth`
 - `QDRANT_URL=http://localhost:6333`
 - `QDRANT_COLLECTION=malaysia_landmarks`
 - `API_KEY=` (optional; when set, send it via the `X-API-Key` header)

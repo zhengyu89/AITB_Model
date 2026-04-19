@@ -6,6 +6,9 @@ from pathlib import Path
 
 from app.services.embedder import DEFAULT_MODEL_NAME
 
+ATTRACTION_CHECKPOINT = Path("my_landmark_attraction.pth")
+FOOD_CHECKPOINT = Path("my_landmark_food.pth")
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -17,12 +20,8 @@ class Settings:
         default_factory=lambda: os.getenv("QDRANT_COLLECTION", "malaysia_landmarks")
     )
     api_key: str | None = field(default_factory=lambda: os.getenv("API_KEY") or None)
-    attraction_checkpoint: Path = field(
-        default_factory=lambda: Path(os.getenv("ATTRACTION_CHECKPOINT", "my_landmark_attraction.pth"))
-    )
-    food_checkpoint: Path = field(
-        default_factory=lambda: Path(os.getenv("FOOD_CHECKPOINT", "my_landmark_food.pth"))
-    )
+    attraction_checkpoint: Path = ATTRACTION_CHECKPOINT
+    food_checkpoint: Path = FOOD_CHECKPOINT
     default_device: str | None = field(default_factory=lambda: os.getenv("MODEL_DEVICE") or None)
     default_topk: int = field(default_factory=lambda: int(os.getenv("DEFAULT_TOPK", "5")))
     global_search_limit: int = field(default_factory=lambda: int(os.getenv("GLOBAL_SEARCH_LIMIT", "50")))
