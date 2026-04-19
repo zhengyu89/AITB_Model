@@ -24,6 +24,7 @@ from app.services.classifier import (
     predict_from_embedding,
     query_embedding_from_pil,
 )
+from app.services.embedder import SUPPORTED_EXTENSIONS
 from app.services.qdrant_retrieval import aggregate_qdrant_results, qdrant_topk
 from qdrant_client import QdrantClient
 
@@ -33,6 +34,7 @@ DEFAULT_COLLECTION = "malaysia_landmarks"
 DEFAULT_ACCEPT_SCORE = 0.40
 DEFAULT_TENTATIVE_SCORE = 0.28
 DEFAULT_MIN_GAP = 0.03
+EVAL_PICKS_DIR = _REPO_ROOT / "data" / "test" / "eval_picks"
 
 
 def _resolve_file(user_path: str, repo_root: Path) -> Path | None:
@@ -220,6 +222,16 @@ def _decision_label(status: str) -> str:
     return "No Reliable Match"
 
 
+@st.cache_data
+def _list_demo_images() -> list[Path]:
+    if not EVAL_PICKS_DIR.exists():
+        return []
+    return sorted(
+        path for path in EVAL_PICKS_DIR.rglob("*")
+        if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
+    )
+
+
 def main() -> None:
     st.set_page_config(page_title="Malaysia Landmark & Food Recognition", layout="wide", initial_sidebar_state="collapsed")
     st.title("Malaysia Landmark & Food Recognition")
@@ -256,8 +268,8 @@ def main() -> None:
     if not apath and not fpath:
         st.error("No attraction or food checkpoint was found. At least one .pth file is required.")
         st.code(
-            "python scripts/train_landmark_head.py --subset-prefix attraction --model-name facebook/dinov2-large --out my_landmark_attraction.pth\n"
-            "python scripts/train_landmark_head.py --subset-prefix food --model-name facebook/dinov2-large --out my_landmark_food.pth",
+            "python scripts/train_landmark_head.py --subset-prefix attraction\n"
+            "python scripts/train_landmark_head.py --subset-prefix food",
             language="bash",
         )
         st.stop()
@@ -272,7 +284,7 @@ def main() -> None:
         st.exception(exc)
         st.stop()
 
-    st.caption(f"DINOv2: `{embedder.model_name}` · Device: **{device}**")
+    # st.caption(f"DINOv2: `{embedder.model_name}` · Device: **{device}**")
 
     qdrant_client = None
     if use_qdrant:
@@ -281,12 +293,38 @@ def main() -> None:
         except Exception as exc:
             st.warning(f"Failed to connect to Qdrant: {exc}")
 
-    up = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png", "webp"])
-    if up is None:
-        st.info("After upload, the page will show attraction classification, food classification, grouped Qdrant candidates, and the final decision.")
+    input_mode = st.radio(
+        "Image Source",
+        options=["Upload Image", "Choose Demo Image"],
+        horizontal=True,
+        index = 1
+    )
+
+    img: Image.Image | None = None
+    image_caption = "Query Image"
+
+    if input_mode == "Upload Image":
+        up = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png", "webp"])
+        if up is not None:
+            img = Image.open(up)
+            image_caption = "Uploaded Image"
+    else:
+        demo_images = _list_demo_images()
+        if not demo_images:
+            st.warning(f"No demo images were found under `{EVAL_PICKS_DIR.relative_to(_REPO_ROOT)}`.")
+        else:
+            selected_demo = st.selectbox(
+                "Choose a demo image",
+                options=demo_images,
+                format_func=lambda p: str(p.relative_to(_REPO_ROOT)),
+            )
+            img = Image.open(selected_demo)
+            image_caption = str(selected_demo.relative_to(_REPO_ROOT))
+
+    if img is None:
+        st.info("Choose a demo image or upload one. The page will then show classification, grouped Qdrant candidates, and the final decision.")
         return
 
-    img = Image.open(up)
     with st.spinner("Running inference..."):
         emb = query_embedding_from_pil(img, embedder)
         emb_list = emb.tolist()
@@ -313,7 +351,7 @@ def main() -> None:
 
     top_left, top_right = st.columns([1, 2])
     with top_left:
-        st.image(img, caption="Query Image", width=int(preview_px))
+        st.image(img, caption=image_caption, width=int(preview_px))
     with top_right:
         st.markdown("### Final Decision")
         if final["status"] == "reject":
@@ -356,13 +394,13 @@ def main() -> None:
             _render_cls_block(
                 "Classification · Attraction",
                 attr_rows,
-                "Attraction checkpoint not found. Train one with `python scripts/train_landmark_head.py --subset-prefix attraction --model-name facebook/dinov2-large --out my_landmark_attraction.pth`.",
+                "Attraction checkpoint not found. Train one with `python scripts/train_landmark_head.py --subset-prefix attraction`.",
             )
         with c2:
             _render_cls_block(
                 "Classification · Food",
                 food_rows,
-                "Food checkpoint not found. Train one with `python scripts/train_landmark_head.py --subset-prefix food --model-name facebook/dinov2-large --out my_landmark_food.pth`.",
+                "Food checkpoint not found. Train one with `python scripts/train_landmark_head.py --subset-prefix food`.",
             )
         with c3:
             st.subheader("Retrieval · Qdrant")
