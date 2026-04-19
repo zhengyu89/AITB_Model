@@ -227,6 +227,14 @@ def _list_demo_images() -> list[Path]:
     )
 
 
+def _demo_image_label(path: Path) -> str:
+    rel = path.relative_to(EVAL_PICKS_DIR)
+    parts = rel.parts
+    if len(parts) >= 3:
+        return f"{parts[-2]}/{parts[-1]}"
+    return str(rel)
+
+
 def main() -> None:
     settings = get_settings()
     st.set_page_config(page_title="Malaysia Landmark Attraction & Food Recognition", layout="wide", initial_sidebar_state="collapsed")
@@ -320,10 +328,10 @@ def main() -> None:
             selected_demo = st.selectbox(
                 "Choose a demo image",
                 options=demo_images,
-                format_func=lambda p: str(p.relative_to(_REPO_ROOT)),
+                format_func=_demo_image_label,
             )
             img = Image.open(selected_demo)
-            image_caption = str(selected_demo.relative_to(_REPO_ROOT))
+            image_caption = _demo_image_label(selected_demo)
 
     if img is None:
         st.info("Choose a demo image or upload one. The page will then show classification, grouped Qdrant candidates, and the final decision.")
