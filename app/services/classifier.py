@@ -40,7 +40,7 @@ def load_landmark_classifier(checkpoint: Path | str, device: str | None = None):
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     path = resolve_checkpoint_path(checkpoint)
     ckpt = torch.load(path, map_location=device)
-    embedder = DinoV2Embedder(model_name=ckpt["dinov2_model_name"], device=device)
+    embedder = DinoV2Embedder(model_name=ckpt["dinov2_model_name"])
     head = nn.Linear(ckpt["embedding_dim"], ckpt["num_classes"]).to(device)
     head.load_state_dict(ckpt["head_state_dict"])
     head.eval()

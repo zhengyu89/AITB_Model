@@ -134,7 +134,7 @@ def main() -> int:
     train_samples = [samples[i] for i in indices if i not in val_idx]
     val_samples = [samples[i] for i in indices if i in val_idx]
 
-    embedder = DinoV2Embedder(model_name=embedding_model_name, device=device)
+    embedder = DinoV2Embedder(model_name=embedding_model_name)
     for param in embedder.model.parameters():
         param.requires_grad = False
 
