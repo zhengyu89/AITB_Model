@@ -15,6 +15,7 @@ class Settings:
         default_factory=lambda: os.getenv("EMBEDDING_MODEL_NAME", "facebook/dinov2-large")
     )
     qdrant_url: str = field(default_factory=lambda: os.getenv("QDRANT_URL", "http://localhost:6333"))
+    qdrant_api_key: str | None = field(default_factory=lambda: os.getenv("QDRANT_API_KEY") or None)
     qdrant_collection: str = field(
         default_factory=lambda: os.getenv("QDRANT_COLLECTION", "malaysia_landmarks")
     )

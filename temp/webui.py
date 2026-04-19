@@ -169,8 +169,8 @@ def _load_inference_bundle(attr_resolved: str, food_resolved: str, dev: str):
 
 
 @st.cache_resource
-def _qdrant_client(url: str) -> QdrantClient:
-    return QdrantClient(url=url)
+def _qdrant_client(url: str, api_key: str | None) -> QdrantClient:
+    return QdrantClient(url=url, api_key=api_key)
 
 
 def _format_cls_rows(rows: list[dict]) -> pd.DataFrame:
@@ -266,6 +266,7 @@ def main() -> None:
         st.markdown("**Qdrant**")
         use_qdrant = st.checkbox("Enable Qdrant retrieval", value=True)
         q_url = st.text_input("Qdrant URL", value=settings.qdrant_url)
+        q_api_key = st.text_input("Qdrant API Key", value=settings.qdrant_api_key or "", type="password")
         q_coll = st.text_input("Collection", value=settings.qdrant_collection)
         accept_score = st.slider("Accept threshold", min_value=0.20, max_value=0.95, value=settings.accept_score, step=0.05)
         tentative_score = st.slider("Tentative threshold", min_value=0.10, max_value=0.80, value=settings.tentative_score, step=0.02)
@@ -301,7 +302,7 @@ def main() -> None:
     qdrant_client = None
     if use_qdrant:
         try:
-            qdrant_client = _qdrant_client(q_url.strip())
+            qdrant_client = _qdrant_client(q_url.strip(), q_api_key.strip() or None)
         except Exception as exc:
             st.warning(f"Failed to connect to Qdrant: {exc}")
 

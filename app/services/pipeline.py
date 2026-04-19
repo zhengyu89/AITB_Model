@@ -67,7 +67,7 @@ def get_prediction_bundle() -> PredictionBundle:
         device=device,
         attraction=attraction,
         food=food,
-        qdrant_client=QdrantClient(url=settings.qdrant_url),
+        qdrant_client=QdrantClient(url=settings.qdrant_url, api_key=settings.qdrant_api_key),
         qdrant_collection=settings.qdrant_collection,
     )
 

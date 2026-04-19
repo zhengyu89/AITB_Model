@@ -162,7 +162,7 @@ def main() -> int:
     args = parse_args()
     settings = get_settings()
     embedding_model_name = settings.embedding_model_name
-    client = QdrantClient(url=args.qdrant_url)
+    client = QdrantClient(url=args.qdrant_url, api_key=settings.qdrant_api_key)
     embedder = DinoV2Embedder(model_name=embedding_model_name)
 
     try:
