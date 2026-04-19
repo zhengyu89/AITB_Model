@@ -2,8 +2,6 @@
 
 A small Malaysia landmark and food recognition project built on top of **Meta DINOv2** (default: `facebook/dinov2-large`), **Qdrant** vector search, two **linear probe** classifiers, and a minimal **FastAPI** service.
 
-> **FAISS note**: this repository no longer uses FAISS or local IVF/NPY/JSON retrieval. If old FAISS-related files still exist in the working tree, treat them as leftovers. The active retrieval backend is **Qdrant**.
-
 ## Overview
 
 ```mermaid
@@ -136,16 +134,6 @@ Or use the short launcher from the repo root:
 ```bash
 python main.py
 ```
-
-Default environment variables:
-
-- `QDRANT_URL=http://localhost:6333`
-- `QDRANT_COLLECTION=malaysia_landmarks`
-- `API_KEY=` (optional; when set, send it via the `X-API-Key` header)
-- `UVICORN_HOST=0.0.0.0`
-- `UVICORN_PORT=8000`
-- `UVICORN_RELOAD=true`
-- `UVICORN_LOG_LEVEL=info`
 
 Public routes:
 

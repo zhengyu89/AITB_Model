@@ -22,7 +22,7 @@ from app.services.embedder import DinoV2Embedder
 
 DATA_DIR = Path("data/reference")
 ATTRACTIONS_CSV = Path("attractions.csv")
-BATCH_UPSERT = 32
+EMBED_BATCH_SIZE = 32
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,7 +31,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
     parser.add_argument("--collection", type=str, default=settings.qdrant_collection)
     parser.add_argument("--qdrant-url", type=str, default=settings.qdrant_url)
-    parser.add_argument("--batch-size", type=int, default=BATCH_UPSERT)
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--attractions-csv", type=Path, default=ATTRACTIONS_CSV)
     return parser.parse_args()
@@ -178,8 +177,8 @@ def main() -> int:
     points = collect_points(args.data_dir, args.attractions_csv)
     batch = []
 
-    for start in tqdm(range(0, len(points), args.batch_size), desc="Embedding & batching"):
-        chunk = points[start : start + args.batch_size]
+    for start in tqdm(range(0, len(points), EMBED_BATCH_SIZE), desc="Embedding & batching"):
+        chunk = points[start : start + EMBED_BATCH_SIZE]
         vectors = embedder.embed_paths([item["path"] for item in chunk])
 
         for item, vector in zip(chunk, vectors):
