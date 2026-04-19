@@ -67,7 +67,7 @@ data/reference/
 - Each leaf directory that directly contains images is treated as one class.
 - Optional class-level metadata can be stored in `metadata.json`.
 - Optional per-image metadata can be stored in a sibling `.json` file and will be merged into the Qdrant payload during ingestion.
-- Attraction metadata can also be loaded from `attractions200226.csv`. The CSV is used to enrich payload fields such as `display_name`, `description`, and `location`.
+- Attraction metadata can also be loaded from `attractions.csv`. The CSV is used to enrich payload fields such as `display_name`, `description`, and `location`.
 - The embedding step still uses only images. CSV and JSON files are metadata sources only; they do not affect the image vector itself.
 
 ## Installation
@@ -113,7 +113,7 @@ If needed, point ingestion at a different attraction metadata file:
 
 ```bash
 python scripts/ingest_images_to_qdrant.py \
-  --attractions-csv attractions200226.csv
+  --attractions-csv attractions.csv
 ```
 
 The embedding backbone is now read from `EMBEDDING_MODEL_NAME` and defaults to `facebook/dinov2-large`.

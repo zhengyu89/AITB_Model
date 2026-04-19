@@ -21,7 +21,7 @@ from app.services.embedder import DinoV2Embedder
 
 
 DATA_DIR = Path("data/reference")
-ATTRACTIONS_CSV = Path("attractions200226.csv")
+ATTRACTIONS_CSV = Path("attractions.csv")
 BATCH_UPSERT = 32
 
 
