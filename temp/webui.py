@@ -233,8 +233,8 @@ def _list_demo_images() -> list[Path]:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Malaysia Landmark & Food Recognition", layout="wide", initial_sidebar_state="collapsed")
-    st.title("Malaysia Landmark & Food Recognition")
+    st.set_page_config(page_title="Malaysia Landmark Attraction & Food Recognition", layout="wide", initial_sidebar_state="collapsed")
+    st.title("Malaysia Landmark Attraction & Food Recognition")
 
     with st.sidebar:
         dev = st.selectbox("Device", options=["cuda", "cpu"], index=0)
