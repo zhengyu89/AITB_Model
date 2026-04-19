@@ -166,14 +166,19 @@ def main() -> int:
     embedder = DinoV2Embedder(model_name=embedding_model_name)
 
     try:
-        client.recreate_collection(
+        if client.collection_exists(args.collection):
+            print(f"Deleting existing collection: {args.collection}")
+            client.delete_collection(collection_name=args.collection)
+        print(f"Creating collection: {args.collection}")
+        client.create_collection(
             collection_name=args.collection,
             vectors_config=VectorParams(size=embedder.embedding_dim, distance=Distance.COSINE),
         )
     except Exception as exc:
-        print("recreate_collection:", exc)
+        print("collection setup:", exc)
 
     points = collect_points(args.data_dir, args.attractions_csv)
+    print(f"Collected {len(points)} image(s) from {args.data_dir}")
     batch = []
 
     for start in tqdm(range(0, len(points), EMBED_BATCH_SIZE), desc="Embedding & batching"):
