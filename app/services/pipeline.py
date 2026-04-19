@@ -46,7 +46,7 @@ def get_prediction_bundle() -> PredictionBundle:
 
     base_path = attraction_path or food_path
     assert base_path is not None
-    ckpt0, embedder, head0, device = load_landmark_classifier(base_path, settings.default_device)
+    ckpt0, embedder, head0, device = load_landmark_classifier(base_path)
 
     attraction = None
     if attraction_path is not None:

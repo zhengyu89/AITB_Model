@@ -242,7 +242,7 @@ def main() -> None:
 
     with st.sidebar:
         device_options = ["cuda", "cpu"]
-        default_device = settings.default_device if settings.default_device in device_options else "cuda"
+        default_device = "cuda" if torch.cuda.is_available() else "cpu"
         dev = st.selectbox("Device", options=device_options, index=device_options.index(default_device))
         if dev == "cuda" and not torch.cuda.is_available():
             st.warning("CUDA is not available. Falling back to CPU.")
