@@ -21,7 +21,7 @@ flowchart TB
     ING --> QD
   end
   subgraph train [Training]
-    TL[scripts/train_landmark_head.py]
+    TL[scripts/train.py]
     PTH[(.pth checkpoints)]
     TL --> PTH
   end
@@ -86,7 +86,7 @@ Run all commands from the repository root.
 | `app/services/classifier.py` | Checkpoint loading and classifier prediction helpers. |
 | `app/services/qdrant_retrieval.py` | Qdrant retrieval and aggregation helpers. |
 | `app/services/pipeline.py` | Shared prediction pipeline for the API. |
-| `scripts/train_landmark_head.py` | Trains a linear classifier head for attraction or food. |
+| `scripts/train.py` | Trains a linear classifier head for attraction or food. |
 | `scripts/ingest_images_to_qdrant.py` | Embeds reference images and writes them into Qdrant. |
 | `scripts/pick_eval_images.py` | Copies a small evaluation sample set from `data/reference`. |
 | `temp/webui.py` | Streamlit UI for manual testing. |
@@ -96,9 +96,9 @@ Run all commands from the repository root.
 ### Train Linear Probe Heads
 
 ```bash
-python scripts/train_landmark_head.py --subset-prefix attraction
+python scripts/train.py --subset-prefix attraction
 
-python scripts/train_landmark_head.py --subset-prefix food
+python scripts/train.py --subset-prefix food
 ```
 
 ### Ingest Reference Images into Qdrant

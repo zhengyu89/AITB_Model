@@ -281,8 +281,8 @@ def main() -> None:
     if not apath and not fpath:
         st.error("No attraction or food checkpoint was found. At least one .pth file is required.")
         st.code(
-            "python scripts/train_landmark_head.py --subset-prefix attraction\n"
-            "python scripts/train_landmark_head.py --subset-prefix food",
+            "python scripts/train.py --subset-prefix attraction\n"
+            "python scripts/train.py --subset-prefix food",
             language="bash",
         )
         st.stop()
@@ -407,13 +407,13 @@ def main() -> None:
             _render_cls_block(
                 "Classification · Attraction",
                 attr_rows,
-                "Attraction checkpoint not found. Train one with `python scripts/train_landmark_head.py --subset-prefix attraction`.",
+                "Attraction checkpoint not found. Train one with `python scripts/train.py --subset-prefix attraction`.",
             )
         with c2:
             _render_cls_block(
                 "Classification · Food",
                 food_rows,
-                "Food checkpoint not found. Train one with `python scripts/train_landmark_head.py --subset-prefix food`.",
+                "Food checkpoint not found. Train one with `python scripts/train.py --subset-prefix food`.",
             )
         with c3:
             st.subheader("Retrieval · Qdrant")
