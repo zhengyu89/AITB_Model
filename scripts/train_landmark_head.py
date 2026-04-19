@@ -26,7 +26,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from app.config import get_embedding_model_name
+from app.config import get_settings
 from app.services.embedder import SUPPORTED_EXTENSIONS, DinoV2Embedder
 
 
@@ -106,7 +106,8 @@ def resolve_output_path(subset_prefix: str | None) -> Path:
 
 def main() -> int:
     args = parse_args()
-    embedding_model_name = get_embedding_model_name()
+    settings = get_settings()
+    embedding_model_name = settings.embedding_model_name
     device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
     out_path = resolve_output_path(args.subset_prefix)
 

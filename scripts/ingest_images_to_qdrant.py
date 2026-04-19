@@ -16,7 +16,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from app.config import get_embedding_model_name
+from app.config import get_settings
 from app.services.embedder import SUPPORTED_EXTENSIONS, DinoV2Embedder
 
 
@@ -163,7 +163,8 @@ def collect_points(data_dir: Path, attraction_csv: Path):
 
 def main() -> int:
     args = parse_args()
-    embedding_model_name = get_embedding_model_name()
+    settings = get_settings()
+    embedding_model_name = settings.embedding_model_name
     client = QdrantClient(url=args.qdrant_url)
     embedder = DinoV2Embedder(model_name=embedding_model_name, device=args.device)
 

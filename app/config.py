@@ -4,8 +4,6 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from app.services.embedder import DEFAULT_MODEL_NAME
-
 ATTRACTION_CHECKPOINT = Path("my_landmark_attraction.pth")
 FOOD_CHECKPOINT = Path("my_landmark_food.pth")
 
@@ -13,7 +11,7 @@ FOOD_CHECKPOINT = Path("my_landmark_food.pth")
 @dataclass(frozen=True)
 class Settings:
     embedding_model_name: str = field(
-        default_factory=lambda: os.getenv("EMBEDDING_MODEL_NAME", DEFAULT_MODEL_NAME)
+        default_factory=lambda: os.getenv("EMBEDDING_MODEL_NAME", "facebook/dinov2-large")
     )
     qdrant_url: str = field(default_factory=lambda: os.getenv("QDRANT_URL", "http://localhost:6333"))
     qdrant_collection: str = field(
@@ -32,7 +30,3 @@ class Settings:
 
 def get_settings() -> Settings:
     return Settings()
-
-
-def get_embedding_model_name() -> str:
-    return os.getenv("EMBEDDING_MODEL_NAME", DEFAULT_MODEL_NAME)
