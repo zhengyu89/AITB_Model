@@ -6,6 +6,7 @@ from pathlib import Path
 
 ATTRACTION_CHECKPOINT = Path("my_landmark_attraction.pth")
 FOOD_CHECKPOINT = Path("my_landmark_food.pth")
+SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 
 @dataclass(frozen=True)
@@ -18,15 +19,12 @@ class Settings:
         default_factory=lambda: os.getenv("QDRANT_COLLECTION", "malaysia_landmarks")
     )
     api_key: str | None = field(default_factory=lambda: os.getenv("API_KEY") or None)
-    attraction_checkpoint: Path = ATTRACTION_CHECKPOINT
-    food_checkpoint: Path = FOOD_CHECKPOINT
     default_device: str | None = field(default_factory=lambda: os.getenv("MODEL_DEVICE") or None)
     default_topk: int = field(default_factory=lambda: int(os.getenv("DEFAULT_TOPK", "5")))
     global_search_limit: int = field(default_factory=lambda: int(os.getenv("GLOBAL_SEARCH_LIMIT", "50")))
     accept_score: float = field(default_factory=lambda: float(os.getenv("ACCEPT_SCORE", "0.40")))
     tentative_score: float = field(default_factory=lambda: float(os.getenv("TENTATIVE_SCORE", "0.28")))
     min_gap: float = field(default_factory=lambda: float(os.getenv("MIN_GAP", "0.03")))
-
 
 def get_settings() -> Settings:
     return Settings()

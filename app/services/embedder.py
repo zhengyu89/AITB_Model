@@ -7,13 +7,13 @@ import numpy as np
 import torch
 from PIL import Image, ImageOps
 
-
-DEFAULT_MODEL_NAME = "facebook/dinov2-large"
-SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-
+from app.config import get_settings
 
 class DinoV2Embedder:
-    def __init__(self, model_name: str = DEFAULT_MODEL_NAME, device: str | None = None):
+    def __init__(self, model_name: str | None = None, device: str | None = None):
+        settings = get_settings()
+        model_name = model_name or settings.embedding_model_name
+
         try:
             from transformers import AutoImageProcessor, AutoModel
         except ImportError as exc:

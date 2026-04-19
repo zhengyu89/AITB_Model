@@ -21,6 +21,8 @@ import cv2
 import numpy as np
 from PIL import Image, ImageOps
 
+from app.config import SUPPORTED_IMAGE_EXTENSIONS
+
 os.environ.setdefault("NO_ALBUMENTATIONS_UPDATE", "1")
 
 try:
@@ -34,7 +36,6 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from app.services.embedder import SUPPORTED_EXTENSIONS
 
 DEFAULT_INPUT_DIR = _REPO_ROOT / "data" / "reference"
 DEFAULT_OUTPUT_DIR = _REPO_ROOT / "data" / "test" / "eval_picks"
@@ -130,7 +131,7 @@ def collect_class_dirs(root: Path) -> list[Path]:
         if not path.is_dir():
             continue
         has_images = any(
-            child.is_file() and child.suffix.lower() in SUPPORTED_EXTENSIONS
+            child.is_file() and child.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
             for child in path.iterdir()
         )
         if has_images:
@@ -142,7 +143,7 @@ def collect_class_images(class_dir: Path) -> list[Path]:
     return sorted(
         p
         for p in class_dir.iterdir()
-        if p.is_file() and p.suffix.lower() in SUPPORTED_EXTENSIONS
+        if p.is_file() and p.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
     )
 
 

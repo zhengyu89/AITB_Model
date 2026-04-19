@@ -26,8 +26,8 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from app.config import get_settings
-from app.services.embedder import SUPPORTED_EXTENSIONS, DinoV2Embedder
+from app.config import ATTRACTION_CHECKPOINT, FOOD_CHECKPOINT, SUPPORTED_IMAGE_EXTENSIONS, get_settings
+from app.services.embedder import DinoV2Embedder
 
 
 def collect_class_dirs(data_dir: Path) -> list[Path]:
@@ -36,7 +36,7 @@ def collect_class_dirs(data_dir: Path) -> list[Path]:
         if not path.is_dir():
             continue
         has_images = any(
-            child.is_file() and child.suffix.lower() in SUPPORTED_EXTENSIONS
+            child.is_file() and child.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
             for child in path.iterdir()
         )
         if has_images:
@@ -66,7 +66,7 @@ def collect_samples_for_class_dirs(
         class_idx = path_to_idx[class_path]
         class_name = class_dir.name
         for image_path in sorted(class_dir.iterdir()):
-            if image_path.is_file() and image_path.suffix.lower() in SUPPORTED_EXTENSIONS:
+            if image_path.is_file() and image_path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS:
                 samples.append((image_path, class_name, class_path, class_idx))
     return samples
 
@@ -98,9 +98,9 @@ def resolve_output_path(subset_prefix: str | None) -> Path:
 
     normalized = subset_prefix.strip("/").replace("\\", "/").rstrip("/")
     if normalized == "attraction":
-        return _REPO_ROOT / "my_landmark_attraction.pth"
+        return _REPO_ROOT / ATTRACTION_CHECKPOINT
     if normalized == "food":
-        return _REPO_ROOT / "my_landmark_food.pth"
+        return _REPO_ROOT / FOOD_CHECKPOINT
     raise SystemExit("subset-prefix must be exactly 'attraction' or 'food'.")
 
 

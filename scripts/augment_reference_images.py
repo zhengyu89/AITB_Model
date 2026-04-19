@@ -14,6 +14,8 @@ import numpy as np
 from PIL import Image, ImageOps
 from tqdm import tqdm
 
+from app.config import SUPPORTED_IMAGE_EXTENSIONS
+
 os.environ.setdefault("NO_ALBUMENTATIONS_UPDATE", "1")
 
 try:
@@ -24,7 +26,6 @@ except ImportError as exc:
     ) from exc
 
 
-SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 DEFAULT_INPUT_DIR = Path("data/reference")
 DEFAULT_OUTPUT_DIR = Path("data/train")
 DEFAULT_VARIANTS = ("clean", "noise", "compressed")
@@ -176,7 +177,7 @@ def collect_images(input_dir: Path) -> list[Path]:
     return sorted(
         path
         for path in input_dir.rglob("*")
-        if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
+        if path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
     )
 
 

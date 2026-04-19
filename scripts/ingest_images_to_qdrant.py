@@ -16,22 +16,21 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from app.config import get_settings
-from app.services.embedder import SUPPORTED_EXTENSIONS, DinoV2Embedder
+from app.config import SUPPORTED_IMAGE_EXTENSIONS, get_settings
+from app.services.embedder import DinoV2Embedder
 
 
-COLLECTION = "malaysia_landmarks"
 DATA_DIR = Path("data/reference")
 ATTRACTIONS_CSV = Path("attractions200226.csv")
 BATCH_UPSERT = 32
-QDRANT_URL = "http://localhost:6333"
 
 
 def parse_args() -> argparse.Namespace:
+    settings = get_settings()
     parser = argparse.ArgumentParser(description="Embed reference images and ingest them into Qdrant.")
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
-    parser.add_argument("--collection", type=str, default=COLLECTION)
-    parser.add_argument("--qdrant-url", type=str, default=QDRANT_URL)
+    parser.add_argument("--collection", type=str, default=settings.qdrant_collection)
+    parser.add_argument("--qdrant-url", type=str, default=settings.qdrant_url)
     parser.add_argument("--batch-size", type=int, default=BATCH_UPSERT)
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--attractions-csv", type=Path, default=ATTRACTIONS_CSV)
@@ -120,7 +119,7 @@ def collect_points(data_dir: Path, attraction_csv: Path):
         image_files = [
             child
             for child in sorted(class_dir.iterdir())
-            if child.is_file() and child.suffix.lower() in SUPPORTED_EXTENSIONS
+            if child.is_file() and child.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
         ]
         if not image_files:
             continue

@@ -7,7 +7,7 @@ from pathlib import Path
 from PIL import Image
 from qdrant_client import QdrantClient
 
-from app.config import Settings, get_settings
+from app.config import ATTRACTION_CHECKPOINT, FOOD_CHECKPOINT, Settings, get_settings
 from app.services.classifier import (
     load_head_branch,
     load_landmark_classifier,
@@ -39,8 +39,8 @@ def _existing_path(path: Path) -> Path | None:
 @lru_cache(maxsize=1)
 def get_prediction_bundle() -> PredictionBundle:
     settings = get_settings()
-    attraction_path = _existing_path(settings.attraction_checkpoint)
-    food_path = _existing_path(settings.food_checkpoint)
+    attraction_path = _existing_path(ATTRACTION_CHECKPOINT)
+    food_path = _existing_path(FOOD_CHECKPOINT)
     if attraction_path is None and food_path is None:
         raise FileNotFoundError("At least one checkpoint is required: attraction or food.")
 

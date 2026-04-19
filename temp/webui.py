@@ -24,16 +24,11 @@ from app.services.classifier import (
     predict_from_embedding,
     query_embedding_from_pil,
 )
-from app.services.embedder import SUPPORTED_EXTENSIONS
 from app.services.qdrant_retrieval import aggregate_qdrant_results, qdrant_topk
+from app.config import ATTRACTION_CHECKPOINT, FOOD_CHECKPOINT, SUPPORTED_IMAGE_EXTENSIONS, get_settings
 from qdrant_client import QdrantClient
 
 
-DEFAULT_QDRANT_URL = "http://localhost:6333"
-DEFAULT_COLLECTION = "malaysia_landmarks"
-DEFAULT_ACCEPT_SCORE = 0.40
-DEFAULT_TENTATIVE_SCORE = 0.28
-DEFAULT_MIN_GAP = 0.03
 EVAL_PICKS_DIR = _REPO_ROOT / "data" / "test" / "eval_picks"
 
 
@@ -228,36 +223,45 @@ def _list_demo_images() -> list[Path]:
         return []
     return sorted(
         path for path in EVAL_PICKS_DIR.rglob("*")
-        if path.is_file() and path.suffix.lower() in SUPPORTED_EXTENSIONS
+        if path.is_file() and path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
     )
 
 
 def main() -> None:
+    settings = get_settings()
     st.set_page_config(page_title="Malaysia Landmark Attraction & Food Recognition", layout="wide", initial_sidebar_state="collapsed")
     st.title("Malaysia Landmark Attraction & Food Recognition")
 
     with st.sidebar:
-        dev = st.selectbox("Device", options=["cuda", "cpu"], index=0)
+        device_options = ["cuda", "cpu"]
+        default_device = settings.default_device if settings.default_device in device_options else "cuda"
+        dev = st.selectbox("Device", options=device_options, index=device_options.index(default_device))
         if dev == "cuda" and not torch.cuda.is_available():
             st.warning("CUDA is not available. Falling back to CPU.")
             dev = "cpu"
 
-        topk = st.slider("Top-K per block", min_value=1, max_value=20, value=5)
+        topk = st.slider("Top-K per block", min_value=1, max_value=20, value=settings.default_topk)
         preview_px = st.slider("Preview width (px)", min_value=180, max_value=480, value=420, step=20)
 
         st.divider()
         st.markdown("**Classifier Checkpoints**")
-        attr_ck = st.text_input("Attraction .pth", value=str(_REPO_ROOT / "my_landmark_attraction.pth"))
-        food_ck = st.text_input("Food .pth", value=str(_REPO_ROOT / "my_landmark_food.pth"))
+        attr_ck = st.text_input(
+            "Attraction .pth",
+            value=str(_REPO_ROOT / ATTRACTION_CHECKPOINT),
+        )
+        food_ck = st.text_input(
+            "Food .pth",
+            value=str(_REPO_ROOT / FOOD_CHECKPOINT),
+        )
 
         st.divider()
         st.markdown("**Qdrant**")
         use_qdrant = st.checkbox("Enable Qdrant retrieval", value=True)
-        q_url = st.text_input("Qdrant URL", value=DEFAULT_QDRANT_URL)
-        q_coll = st.text_input("Collection", value=DEFAULT_COLLECTION)
-        accept_score = st.slider("Accept threshold", min_value=0.20, max_value=0.95, value=DEFAULT_ACCEPT_SCORE, step=0.05)
-        tentative_score = st.slider("Tentative threshold", min_value=0.10, max_value=0.80, value=DEFAULT_TENTATIVE_SCORE, step=0.02)
-        min_gap = st.slider("Minimum Top-1 / Top-2 gap", min_value=0.00, max_value=0.20, value=DEFAULT_MIN_GAP, step=0.01)
+        q_url = st.text_input("Qdrant URL", value=settings.qdrant_url)
+        q_coll = st.text_input("Collection", value=settings.qdrant_collection)
+        accept_score = st.slider("Accept threshold", min_value=0.20, max_value=0.95, value=settings.accept_score, step=0.05)
+        tentative_score = st.slider("Tentative threshold", min_value=0.10, max_value=0.80, value=settings.tentative_score, step=0.02)
+        min_gap = st.slider("Minimum Top-1 / Top-2 gap", min_value=0.00, max_value=0.20, value=settings.min_gap, step=0.01)
 
     if tentative_score >= accept_score:
         tentative_score = max(0.0, accept_score - 0.01)
