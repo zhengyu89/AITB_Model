@@ -116,6 +116,8 @@ python scripts/ingest_images_to_qdrant.py \
 
 The embedding backbone is now read from `EMBEDDING_MODEL_NAME` and defaults to `facebook/dinov2-large`.
 
+If your Qdrant deployment requires authentication, set `QDRANT_API_KEY` in the environment. The API service, ingestion script, and Streamlit UI all read the same optional key.
+
 Make sure the same DINO backbone is used everywhere:
 
 - training checkpoints
@@ -147,6 +149,60 @@ Protected API routes:
 - `GET /api/v1/docs`
 - `GET /api/v1/openapi.json`
 
+### Run With Docker
+
+Build the image from the repository root:
+
+Method 1: pass environment variables directly with `docker run` and `docker build`:
+
+```bash
+docker build -f docker/Dockerfile -t malaysia-landmark-recognition .
+```
+
+```bash
+docker run --rm -p 8000:8000 \
+  -e QDRANT_URL=http://host.docker.internal:6333 \
+  -e QDRANT_API_KEY=your-qdrant-key \
+  -e QDRANT_COLLECTION=malaysia_landmarks \
+  -e API_KEY=your-secret-key \
+  malaysia-landmark-recognition
+```
+
+Method 2: use Docker Compose:
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+The provided `docker-compose.yml` reads variables from `.env`, requests all visible NVIDIA GPUs, and starts the same API container.
+
+GPU notes:
+
+- This requires Docker with NVIDIA GPU support on the host.
+- The container prints a short CUDA self-check during startup so you can confirm whether `torch` can see the GPU.
+- If your Qdrant deployment requires authentication, set `QDRANT_API_KEY`. Leave it empty for local unauthenticated setups.
+
+Startup behavior:
+
+- The container runs `docker/docker-entrypoint.sh`.
+- It performs startup smoke checks and prints a CUDA status summary.
+- It does not run Qdrant ingestion on startup.
+- `docker compose up` is only responsible for starting the API container.
+
+If you want to ingest reference images manually:
+
+```bash
+docker compose run --rm api python scripts/ingest_images_to_qdrant.py
+```
+
+If you want to force a full rebuild:
+
+```bash
+docker compose run --rm api python scripts/ingest_images_to_qdrant.py --rebuild
+```
+
+
 ### Run Streamlit
 
 ```bash
@@ -163,7 +219,7 @@ python scripts/pick_eval_images.py --per-class 2 --seed 42
 
 1. Put reference images under `data/reference/attraction/...` and `data/reference/food/...`.
 2. Train the two linear probe heads.
-3. Re-ingest Qdrant using the same DINO backbone.
+3. Rebuild Qdrant manually using the same DINO backbone when reference data changes.
 4. Start FastAPI or Streamlit.
 5. Test predictions against real user images.
 
