@@ -81,7 +81,6 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--val-ratio", type=float, default=0.1)
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--device", type=str, default=None)
     p.add_argument(
         "--subset-prefix",
         type=str,
@@ -108,7 +107,7 @@ def main() -> int:
     args = parse_args()
     settings = get_settings()
     embedding_model_name = settings.embedding_model_name
-    device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     out_path = resolve_output_path(args.subset_prefix)
 
     random.seed(args.seed)

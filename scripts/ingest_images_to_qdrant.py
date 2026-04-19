@@ -31,7 +31,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
     parser.add_argument("--collection", type=str, default=settings.qdrant_collection)
     parser.add_argument("--qdrant-url", type=str, default=settings.qdrant_url)
-    parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--attractions-csv", type=Path, default=ATTRACTIONS_CSV)
     return parser.parse_args()
 
@@ -164,7 +163,7 @@ def main() -> int:
     settings = get_settings()
     embedding_model_name = settings.embedding_model_name
     client = QdrantClient(url=args.qdrant_url)
-    embedder = DinoV2Embedder(model_name=embedding_model_name, device=args.device)
+    embedder = DinoV2Embedder(model_name=embedding_model_name)
 
     try:
         client.recreate_collection(

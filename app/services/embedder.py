@@ -10,7 +10,7 @@ from PIL import Image, ImageOps
 from app.config import get_settings
 
 class DinoV2Embedder:
-    def __init__(self, model_name: str | None = None, device: str | None = None):
+    def __init__(self, model_name: str | None = None):
         settings = get_settings()
         model_name = model_name or settings.embedding_model_name
 
@@ -21,7 +21,7 @@ class DinoV2Embedder:
                 "transformers is not installed. Run `./venv/bin/pip install -r requirements.txt` first."
             ) from exc
 
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_name = model_name
         self.processor = _load_with_local_fallback(AutoImageProcessor, model_name)
         self.model = _load_with_local_fallback(AutoModel, model_name).to(self.device)
