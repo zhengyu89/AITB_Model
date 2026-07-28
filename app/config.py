@@ -4,6 +4,11 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(_REPO_ROOT / ".env")
+
 ATTRACTION_CHECKPOINT = Path("my_landmark_attraction.pth")
 FOOD_CHECKPOINT = Path("my_landmark_food.pth")
 SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
