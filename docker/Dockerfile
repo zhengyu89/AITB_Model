@@ -38,11 +38,13 @@ RUN /app/.venv/bin/pip install --no-cache-dir -r requirements.txt
 # Copy application code and entrypoint script
 COPY --chown=${UID}:${GID} . /app
 COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Switch to non-root user for runtime security
 USER appuser
 
 # Expose port and set entrypoint
 EXPOSE ${APP_PORT}
+
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
