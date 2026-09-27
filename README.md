@@ -1,6 +1,6 @@
 # Malaysia Landmark Recognition
 
-A small Malaysia landmark and food recognition project built on top of **Meta DINOv2** (default: `facebook/dinov2-large`), **Qdrant** vector search, two **linear probe** classifiers, and a minimal **FastAPI** service.
+A small Malaysia landmark and food recognition project built on top of **Meta DINOv2** (default: `facebook/dinov2-large`), **Qdrant** vector search, two **linear probe** classifiers, and a minimal **FastAPI** service. It also serves general-purpose sentence embeddings (`all-MiniLM-L6-v2` by default) over `POST /api/v1/embeddings`, so callers such as AI-Travel-Buddy's RAG search don't need to load their own copy of the model.
 
 ## Contents
 
@@ -12,6 +12,7 @@ A small Malaysia landmark and food recognition project built on top of **Meta DI
 - [Project Structure](#project-structure)
 - [Operation Guides](#operation-guides)
 - [GPS-Aware Recognition](#gps-aware-recognition)
+- [Text Embedding Service](#text-embedding-service)
 - [Typical Workflow](#typical-workflow)
 - [Main Outputs](#main-outputs)
 - [Notes](#notes)
@@ -137,7 +138,9 @@ Run all commands from the repository root.
 | `app/services/qdrant_retrieval.py` | Qdrant retrieval and aggregation helpers. |
 | `app/services/geo_ranking.py` | GPS re-ranking of grouped candidates (soft prior, guardrails, decision). |
 | `app/services/pipeline.py` | Shared prediction pipeline for the API. |
+| `app/services/text_embedder.py` | Loads the sentence embedding model once and encodes text for `/embeddings`. |
 | `app/routes/predict.py` | `/predict` and `/predict/upload` request handling. |
+| `app/routes/embeddings.py` | `/embeddings` request handling. |
 | `scripts/train.py` | Trains a linear classifier head for attraction or food. |
 | `scripts/ingest_images_to_qdrant.py` | Embeds reference images and writes them into Qdrant. |
 | `scripts/pick_eval_images.py` | Copies a small evaluation sample set from `data/reference`. |
@@ -199,6 +202,7 @@ Protected API routes:
 - `GET /api/v1/`
 - `POST /api/v1/predict/`
 - `POST /api/v1/predict/upload`
+- `POST /api/v1/embeddings`
 - `GET /api/v1/docs`
 - `GET /api/v1/openapi.json`
 
@@ -236,6 +240,7 @@ GPU notes:
 - The container prints a short CUDA self-check during startup so you can confirm whether `torch` can see the GPU.
 - If your Qdrant deployment requires authentication, set `QDRANT_API_KEY`. Leave it empty for local unauthenticated setups.
 - Set `VISION_SERVICE_API_KEY` to protect the `/api/v1` routes. Callers must send the same value in the `X-API-KEY` header. The main FastAPI backend (`AI-Travel-Buddy`) should reference this same value in its vision client configuration. If it is empty, `/api/v1` is public.
+- `TEXT_EMBEDDING_MODEL_NAME` (default `all-MiniLM-L6-v2`) is downloaded from Hugging Face on first use unless it's already in the container's Hugging Face cache, same as the DINOv2 backbone.
 
 Startup behavior:
 
@@ -327,6 +332,65 @@ Run the unit tests covering this logic with:
 ```bash
 python -m unittest discover -s tests -t .
 ```
+
+## Text Embedding Service
+
+`POST /api/v1/embeddings` serves general-purpose sentence embeddings so that
+other services (currently AI-Travel-Buddy's RAG search) don't each need to
+load their own copy of the model. It requires the same `X-API-KEY` header as
+the predict routes.
+
+### Request
+
+```json
+{
+  "texts": ["nasi lemak", "cendol"],
+  "model": "all-MiniLM-L6-v2"
+}
+```
+
+| Field | Required | Meaning |
+|---|---|---|
+| `texts` | yes | 1 to `TEXT_EMBEDDING_MAX_BATCH` (default 128) strings, embedded in order. Never logged. |
+| `model` | no | Defaults to `TEXT_EMBEDDING_MODEL_NAME`. If set, must match it exactly or the request is rejected — this is a safety check, not a way to pick a different model at request time. |
+
+### Response
+
+```json
+{
+  "model": "all-MiniLM-L6-v2",
+  "dimension": 384,
+  "embeddings": [[...], [...]]
+}
+```
+
+One vector per input text, in the same order. `dimension` is the model's
+actual output length, not a configured value, so it can never drift from what
+`embeddings` actually contains.
+
+### Errors
+
+| Status | When |
+|---|---|
+| `401` | Missing or wrong `X-API-KEY`. |
+| `400` | `model` doesn't match `TEXT_EMBEDDING_MODEL_NAME`. |
+| `422` | `texts` is empty or has more items than `TEXT_EMBEDDING_MAX_BATCH`. |
+| `503` | The model failed to load. Retried automatically on the next request. |
+
+### Behavior notes
+
+- The model is loaded once at process startup (in the FastAPI `lifespan`) and
+  reused for every request; encoding runs in a thread pool so it doesn't block
+  the event loop. If the startup load fails (e.g. a network hiccup while
+  downloading the model), the service logs a warning and keeps serving image
+  recognition; `/embeddings` then retries the load on its next call.
+- `encode()` is always called with the library's default arguments — no
+  prefixes, no normalization, no other preprocessing — because the caller's
+  Qdrant collection already stores vectors produced the same way. Changing
+  `TEXT_EMBEDDING_MODEL_NAME` changes the vector space, so any existing
+  collection must be re-embedded to match.
+- Bake the model into the Docker image (or otherwise warm the Hugging Face
+  cache) rather than relying on a first-request download in production.
 
 ## Typical Workflow
 

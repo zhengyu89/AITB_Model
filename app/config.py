@@ -37,6 +37,12 @@ class Settings:
         default_factory=lambda: float(os.getenv("GEO_PRIOR_DISTANCE_M", "8000"))
     )
     geo_reorder_window: float = field(default_factory=lambda: float(os.getenv("GEO_REORDER_WINDOW", "0.04")))
+    text_embedding_model_name: str = field(
+        default_factory=lambda: os.getenv("TEXT_EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
+    )
+    text_embedding_max_batch: int = field(
+        default_factory=lambda: int(os.getenv("TEXT_EMBEDDING_MAX_BATCH", "128"))
+    )
 
 def get_settings() -> Settings:
     return Settings()

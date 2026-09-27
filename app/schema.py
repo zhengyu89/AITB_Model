@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Any, Literal
 
 from app.config import get_settings
@@ -122,3 +122,30 @@ class PredictResponse(BaseModel):
         description="Optional debug payload included only when include_debug=true.",
     )
 
+
+class EmbeddingsRequest(BaseModel):
+    texts: list[str] = Field(
+        ...,
+        min_length=1,
+        description="Texts to embed, in order. Never logged.",
+    )
+    model: str = Field(
+        default_factory=lambda: get_settings().text_embedding_model_name,
+        description="Must match the model this service is configured to serve, or the request is rejected.",
+    )
+
+    @model_validator(mode="after")
+    def _check_batch_size(self) -> "EmbeddingsRequest":
+        max_batch = get_settings().text_embedding_max_batch
+        if len(self.texts) > max_batch:
+            raise ValueError(f"texts must contain at most {max_batch} items.")
+        return self
+
+
+class EmbeddingsResponse(BaseModel):
+    model: str = Field(..., description="The model that produced these embeddings.")
+    dimension: int = Field(..., description="Length of each embedding vector.")
+    embeddings: list[list[float]] = Field(
+        ...,
+        description="One embedding vector per input text, in the same order as the request.",
+    )
