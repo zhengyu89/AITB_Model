@@ -217,7 +217,7 @@ docker run --rm -p 8000:8000 \
   -e QDRANT_URL=http://host.docker.internal:6333 \
   -e QDRANT_API_KEY=your-qdrant-key \
   -e QDRANT_COLLECTION=malaysia_landmarks \
-  -e API_KEY=your-secret-key \
+  -e VISION_SERVICE_API_KEY=your-secret-key \
   malaysia-landmark-recognition
 ```
 
@@ -235,6 +235,7 @@ GPU notes:
 - This requires Docker with NVIDIA GPU support on the host.
 - The container prints a short CUDA self-check during startup so you can confirm whether `torch` can see the GPU.
 - If your Qdrant deployment requires authentication, set `QDRANT_API_KEY`. Leave it empty for local unauthenticated setups.
+- Set `VISION_SERVICE_API_KEY` to protect the `/api/v1` routes. Callers must send the same value in the `X-API-KEY` header. The main FastAPI backend (`AI-Travel-Buddy`) should reference this same value in its vision client configuration. If it is empty, `/api/v1` is public.
 
 Startup behavior:
 

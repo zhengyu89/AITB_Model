@@ -24,7 +24,9 @@ class Settings:
     qdrant_collection: str = field(
         default_factory=lambda: os.getenv("QDRANT_COLLECTION", "malaysia_landmarks")
     )
-    api_key: str | None = field(default_factory=lambda: os.getenv("API_KEY") or None)
+    vision_service_api_key: str | None = field(
+        default_factory=lambda: os.getenv("VISION_SERVICE_API_KEY") or None
+    )
     default_topk: int = field(default_factory=lambda: int(os.getenv("DEFAULT_TOPK", "5")))
     global_search_limit: int = field(default_factory=lambda: int(os.getenv("GLOBAL_SEARCH_LIMIT", "50")))
     accept_score: float = field(default_factory=lambda: float(os.getenv("ACCEPT_SCORE", "0.40")))

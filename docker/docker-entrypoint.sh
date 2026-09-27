@@ -3,7 +3,6 @@ set -euo pipefail
 
 APP_ENV=${APP_ENV:-production}
 APP_PORT=${APP_PORT:-8000}
-UVICORN_WORKERS=${UVICORN_WORKERS:-1}
 QDRANT_URL=${QDRANT_URL:-http://localhost:6333}
 QDRANT_COLLECTION=${QDRANT_COLLECTION:-malaysia_landmarks}
 ATTRACTION_CHECKPOINT=my_landmark_attraction.pth
@@ -34,10 +33,10 @@ else
   exit 1
 fi
 
-if [ -n "${API_KEY:-}" ]; then
-  echo "✓ API_KEY protection is enabled"
+if [ -n "${VISION_SERVICE_API_KEY:-}" ]; then
+  echo "✓ VISION_SERVICE_API_KEY protection is enabled"
 else
-  echo "⚠️  WARNING: API_KEY is not set; /api/v1 routes will be public"
+  echo "⚠️  WARNING: VISION_SERVICE_API_KEY is not set; /api/v1 routes will be public"
 fi
 
 echo "=== Smoke tests completed ==="
@@ -48,5 +47,5 @@ if [ "$APP_ENV" = "local" ]; then
   exec uvicorn app.main:app --host 0.0.0.0 --port "$APP_PORT" --reload
 else
   echo "Running in PRODUCTION mode"
-  exec uvicorn app.main:app --host 0.0.0.0 --port "$APP_PORT" --workers "$UVICORN_WORKERS"
+  exec uvicorn app.main:app --host 0.0.0.0 --port "$APP_PORT"
 fi
