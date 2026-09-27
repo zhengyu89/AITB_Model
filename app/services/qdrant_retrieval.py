@@ -56,38 +56,6 @@ def haversine_distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> 
     return radius * c
 
 
-def rank_rows_by_geo_distance(
-    rows: list[dict],
-    user_lat: float,
-    user_lon: float,
-) -> list[dict]:
-    ranked: list[dict] = []
-    for row in rows:
-        payload = row.get("payload") or {}
-        location = payload.get("location") or {}
-        lat = location.get("lat", payload.get("lat")) if isinstance(location, dict) else payload.get("lat")
-        lon = location.get("lon", payload.get("lon")) if isinstance(location, dict) else payload.get("lon")
-        if lat is None or lon is None:
-            continue
-
-        try:
-            distance_m = haversine_distance_m(float(user_lat), float(user_lon), float(lat), float(lon))
-        except (TypeError, ValueError):
-            continue
-
-        row_copy = row.copy()
-        row_copy["distance_m"] = distance_m
-        ranked.append(row_copy)
-
-    ranked.sort(
-        key=lambda row: (
-            row.get("distance_m") if row.get("distance_m") is not None else 1e18,
-            -float(row.get("score") or 0.0),
-        )
-    )
-    return ranked
-
-
 def aggregate_qdrant_results(rows: list[dict]) -> list[dict]:
     grouped: dict[str, dict] = defaultdict(
         lambda: {
@@ -99,7 +67,6 @@ def aggregate_qdrant_results(rows: list[dict]) -> list[dict]:
             "total_score": 0.0,
             "hit_count": 0,
             "best_image_path": None,
-            "best_distance_m": None,
             "payload": {},
         }
     )
@@ -117,7 +84,6 @@ def aggregate_qdrant_results(rows: list[dict]) -> list[dict]:
         if score >= float(item["best_score"]):
             item["best_score"] = score
             item["best_image_path"] = row.get("image_path")
-            item["best_distance_m"] = row.get("distance_m")
             item["payload"] = row.get("payload") or item["payload"]
 
     items = list(grouped.values())

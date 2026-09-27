@@ -30,6 +30,11 @@ class Settings:
     accept_score: float = field(default_factory=lambda: float(os.getenv("ACCEPT_SCORE", "0.40")))
     tentative_score: float = field(default_factory=lambda: float(os.getenv("TENTATIVE_SCORE", "0.28")))
     min_gap: float = field(default_factory=lambda: float(os.getenv("MIN_GAP", "0.03")))
+    geo_max_weight: float = field(default_factory=lambda: float(os.getenv("GEO_MAX_WEIGHT", "0.08")))
+    geo_prior_distance_m: float = field(
+        default_factory=lambda: float(os.getenv("GEO_PRIOR_DISTANCE_M", "8000"))
+    )
+    geo_reorder_window: float = field(default_factory=lambda: float(os.getenv("GEO_REORDER_WINDOW", "0.04")))
 
 def get_settings() -> Settings:
     return Settings()

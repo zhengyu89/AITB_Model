@@ -11,6 +11,7 @@ A small Malaysia landmark and food recognition project built on top of **Meta DI
 - [Local Installation](#local-installation)
 - [Project Structure](#project-structure)
 - [Operation Guides](#operation-guides)
+- [GPS-Aware Recognition](#gps-aware-recognition)
 - [Typical Workflow](#typical-workflow)
 - [Main Outputs](#main-outputs)
 - [Notes](#notes)
@@ -134,11 +135,14 @@ Run all commands from the repository root.
 | `app/services/embedder.py` | DINOv2 embedding service. |
 | `app/services/classifier.py` | Checkpoint loading and classifier prediction helpers. |
 | `app/services/qdrant_retrieval.py` | Qdrant retrieval and aggregation helpers. |
+| `app/services/geo_ranking.py` | GPS re-ranking of grouped candidates (soft prior, guardrails, decision). |
 | `app/services/pipeline.py` | Shared prediction pipeline for the API. |
+| `app/routes/predict.py` | `/predict` and `/predict/upload` request handling. |
 | `scripts/train.py` | Trains a linear classifier head for attraction or food. |
 | `scripts/ingest_images_to_qdrant.py` | Embeds reference images and writes them into Qdrant. |
 | `scripts/pick_eval_images.py` | Copies a small evaluation sample set from `data/reference`. |
 | `temp/webui.py` | Streamlit UI for manual testing. |
+| `tests/` | Unit tests for geo re-ranking and the predict routes. |
 
 ## Operation Guides
 
@@ -264,6 +268,65 @@ docker compose run --rm api python scripts/ingest_images_to_qdrant.py --rebuild
 python scripts/pick_eval_images.py --per-class 2 --seed 42
 ```
 
+## GPS-Aware Recognition
+
+GPS is a soft prior, never a filter. Retrieval against Qdrant is always global
+(no radius filter, no distance-first sort); a device fix, when trusted, can
+only re-rank grouped candidates that are already visually close to the top
+match, and it can never turn a raw-sub-threshold candidate into a match.
+
+### Request fields
+
+Sent as JSON fields on `POST /api/v1/predict/`, or multipart form fields on
+`POST /api/v1/predict/upload` (never as query parameters, so they don't end up
+in the access log):
+
+| Field | Required together | Meaning |
+|---|---|---|
+| `geo_lat`, `geo_lon` | yes | The device's current position (WGS84 decimal degrees). Only send this when there is evidence it also describes the photo's subject, e.g. an in-app camera capture with a fresh, accurate fix. Rejected with `422` if only one is set, out of range, non-finite, or `(0, 0)`. |
+| `geo_accuracy_m` | no | Horizontal accuracy of the fix, in metres. Lower is trusted more. |
+| `geo_age_s` | no | Age of the fix in seconds. Lower is trusted more. |
+| `user_lat`, `user_lon` | yes | Deprecated legacy aliases for `geo_lat`/`geo_lon`. Still accepted (with unknown accuracy/age, so a low weight) for backward compatibility. On `/predict/upload` these remain query parameters, so avoid them for new integrations. |
+
+### Response fields
+
+| Field | Meaning |
+|---|---|
+| `retrieval_scope` | `global` when no geo point was applied, `geo_reranked` when it was. |
+| `geo_reason` | Why geo did or didn't change the result: `not_provided`, `zero_weight`, `strong_visual_match`, `geo_disambiguated`, `reordered`, `no_effect`. |
+| `geo_weight` | The effective geo prior weight used (`0` when not applied). |
+| `final_match.distance_m`, `candidates[].distance_m` | Distance from the geo point. Present only when `retrieval_scope == "geo_reranked"`. |
+| `candidates[].similarity` | Always the raw visual similarity, regardless of geo. |
+| `candidates[].combined_score` | Similarity plus the weighted geo prior. Present only when geo was applied. |
+
+### Algorithm
+
+1. Qdrant returns the top `max(topk, GLOBAL_SEARCH_LIMIT)` hits by embedding similarity (no geo filter), grouped by place and sorted by visual similarity.
+2. If no geo point was supplied, or its computed weight is `0`, the decision uses the visual order as-is (`retrieval_scope = "global"`).
+3. Otherwise, only the places within `GEO_REORDER_WINDOW` similarity of the visual #1 (and still at or above `TENTATIVE_SCORE`) are eligible to be reordered, by `combined_score = similarity + geo_weight * exp(-distance_m / GEO_PRIOR_DISTANCE_M)`. Every other place keeps its visual-order position below them.
+4. `geo_weight = GEO_MAX_WEIGHT * accuracy_factor(geo_accuracy_m) * age_factor(geo_age_s)`, where each factor is `1.0` at or below its "full" breakpoint (50 m / 60 s), `0.5` up to its "half" breakpoint (200 m / 120 s), `0` beyond it, and `0.5` when the value is missing (legacy calls).
+5. Accept/tentative thresholds (`ACCEPT_SCORE`, `TENTATIVE_SCORE`) are always checked against **raw** similarity, never the combined score, so geo can disambiguate between two already-plausible places but can never promote a weak visual match.
+6. The gap used for `MIN_GAP` is always between the #1 and #2 of whichever order (visual or combined) produced the decision — never a "nearest vs. next-nearest" comparison.
+
+### Tuning
+
+| Variable | Default | Meaning |
+|---|---:|---|
+| `GEO_MAX_WEIGHT` | `0.08` | Upper bound on how much the geo prior can add to a similarity score. |
+| `GEO_PRIOR_DISTANCE_M` | `8000` | Distance (metres) at which the prior decays to `~0.37`. |
+| `GEO_REORDER_WINDOW` | `0.04` | Similarity margin below the visual #1 that remains eligible for reordering. |
+
+These, along with `ACCEPT_SCORE`, `TENTATIVE_SCORE`, `MIN_GAP`, and
+`GLOBAL_SEARCH_LIMIT`, should be tuned against a labelled evaluation set (camera
+photos with a known capture location, plus gallery photos taken elsewhere)
+before relying on geo re-ranking in production.
+
+Run the unit tests covering this logic with:
+
+```bash
+python -m unittest discover -s tests -t .
+```
+
 ## Typical Workflow
 
 1. Put reference images under `data/reference/attraction/...` and `data/reference/food/...`.
@@ -285,5 +348,4 @@ python scripts/pick_eval_images.py --per-class 2 --seed 42
 - The attraction and food classifier scores should not be compared directly across models.
 - A linear probe checkpoint is **not** a replacement backbone.
 - If you ever want the trained model itself to produce retrieval embeddings, that would require a different training strategy such as backbone fine-tuning or metric learning.
-- GPS-aware lookup now uses `location: {lat, lon}` to compute candidate distance and prefer the nearest recognized result when coordinates are available.
-- New ingested points store a dedicated `location` object. Radius-based filtering is no longer used.
+- New ingested points store a dedicated `location` object, read by GPS re-ranking (see [GPS-Aware Recognition](#gps-aware-recognition)). Radius-based filtering is no longer used.

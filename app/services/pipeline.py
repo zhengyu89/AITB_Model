@@ -7,7 +7,7 @@ from pathlib import Path
 from PIL import Image
 from qdrant_client import QdrantClient
 
-from app.config import ATTRACTION_CHECKPOINT, FOOD_CHECKPOINT, Settings, get_settings
+from app.config import ATTRACTION_CHECKPOINT, FOOD_CHECKPOINT, get_settings
 from app.services.classifier import (
     load_head_branch,
     load_landmark_classifier,
@@ -16,7 +16,8 @@ from app.services.classifier import (
     resolve_checkpoint_path,
 )
 from app.services.embedder import DinoV2Embedder
-from app.services.qdrant_retrieval import aggregate_qdrant_results, qdrant_topk, rank_rows_by_geo_distance
+from app.services.geo_ranking import GeoPoint, accuracy_factor, age_factor, rank_and_decide
+from app.services.qdrant_retrieval import aggregate_qdrant_results, qdrant_topk
 
 
 @dataclass
@@ -75,8 +76,7 @@ def get_prediction_bundle() -> PredictionBundle:
 def predict_image(
     pil_image: Image.Image,
     topk: int,
-    user_lat: float | None = None,
-    user_lon: float | None = None,
+    geo_point: GeoPoint | None = None,
     include_classification: bool = True,
     include_debug: bool = False,
 ) -> dict:
@@ -95,43 +95,29 @@ def predict_image(
         ckpt, head = bundle.food
         food_rows = predict_from_embedding(embedding, ckpt, head, bundle.device, topk=topk)
 
+    # Retrieval is always global; GPS only re-ranks the grouped places afterwards.
     global_rows = qdrant_topk(
         client=bundle.qdrant_client,
         collection=bundle.qdrant_collection,
         query_vector=vector,
         limit=max(topk, settings.global_search_limit),
     )
-    global_grouped = aggregate_qdrant_results(global_rows)
-
-    local_rows: list[dict] = []
-    local_grouped: list[dict] = []
-    used_scope = "global"
-
-    if user_lat is not None and user_lon is not None:
-        local_rows = rank_rows_by_geo_distance(global_rows, user_lat, user_lon)
-        local_grouped = aggregate_qdrant_results(local_rows)
-        if local_grouped:
-            local_grouped.sort(
-                key=lambda item: (
-                    item.get("best_distance_m") if item.get("best_distance_m") is not None else 1e18,
-                    -float(item.get("best_score") or 0.0),
-                )
-            )
-            used_scope = "local"
-
-    selected_rows = local_rows if used_scope == "local" else global_rows
-    selected_grouped = local_grouped if used_scope == "local" else global_grouped
-    final_decision = _decide_final(selected_grouped, settings)
+    grouped = aggregate_qdrant_results(global_rows)
+    ranking = rank_and_decide(grouped, geo_point, settings)
+    geo_applied = ranking.retrieval_scope == "geo_reranked"
 
     response = {
-        "status": final_decision["status"],
-        "retrieval_scope": used_scope,
-        "final_match": _build_final_match(final_decision),
-        "candidates": _build_candidates(selected_grouped[:topk]),
+        "status": ranking.decision["status"],
+        "retrieval_scope": ranking.retrieval_scope,
+        "geo_reason": ranking.geo_reason,
+        "geo_weight": ranking.geo_weight,
+        "final_match": _build_final_match(ranking.decision, geo_applied),
+        "candidates": _build_candidates(ranking.order[:topk], geo_applied),
         "classification": _build_classification_summary(attraction_rows, food_rows) if include_classification else None,
     }
 
     if include_debug:
+        # Never echo the geo point itself; weights and per-candidate distances are enough.
         response["debug"] = {
             "embedding_model": bundle.embedder.model_name,
             "embedding_dim": bundle.embedder.embedding_dim,
@@ -142,52 +128,37 @@ def predict_image(
                 "min_gap": settings.min_gap,
             },
             "geo": {
-                "user_lat": user_lat,
-                "user_lon": user_lon,
-                "local_candidate_count": len(local_grouped),
-                "global_candidate_count": len(global_grouped),
+                "provided": geo_point is not None,
+                "legacy_fields": bool(geo_point and geo_point.legacy),
+                "accuracy_factor": accuracy_factor(geo_point.accuracy_m) if geo_point else None,
+                "age_factor": age_factor(geo_point.age_s) if geo_point else None,
+                "weight": ranking.geo_weight,
+                "max_weight": settings.geo_max_weight,
+                "prior_distance_m": settings.geo_prior_distance_m,
+                "reorder_window": settings.geo_reorder_window,
+                "reorder_window_size": ranking.reorder_window_size,
+                "visual_order": [item.get("display_name") for item in grouped[:topk]],
+                "candidate_count": len(grouped),
             },
-            "decision": final_decision,
+            "decision": _debug_decision(ranking.decision),
         }
 
     return response
 
 
-def _decide_final(grouped_rows: list[dict], settings: Settings) -> dict:
-    if grouped_rows:
-        top = grouped_rows[0]
-        score = float(top["best_score"])
-        second_score = float(grouped_rows[1]["best_score"]) if len(grouped_rows) > 1 else 0.0
-        gap = score - second_score
-
-        if score >= settings.accept_score and gap >= settings.min_gap:
-            return {
-                "status": "accept",
-                "row": top,
-                "score": score,
-                "gap": gap,
-                "hit_count": int(top["hit_count"]),
-            }
-
-        if score >= settings.tentative_score:
-            return {
-                "status": "tentative",
-                "row": top,
-                "score": score,
-                "gap": gap,
-                "hit_count": int(top["hit_count"]),
-            }
-
+def _debug_decision(decision: dict) -> dict:
+    row = decision.get("row")
     return {
-        "status": "reject",
-        "row": None,
-        "score": None,
-        "gap": None,
-        "hit_count": 0,
+        "status": decision["status"],
+        "name": row.get("display_name") if row else None,
+        "score": decision["score"],
+        "gap": decision["gap"],
+        "hit_count": decision["hit_count"],
+        "combined_score": row.get("combined_score") if row else None,
     }
 
 
-def _build_final_match(decision: dict) -> dict | None:
+def _build_final_match(decision: dict, geo_applied: bool) -> dict | None:
     row = decision.get("row")
     if row is None:
         return None
@@ -201,11 +172,11 @@ def _build_final_match(decision: dict) -> dict | None:
         "description": payload.get("description"),
         "location": payload.get("location"),
         "image_path": row.get("best_image_path"),
-        "distance_m": row.get("best_distance_m"),
+        "distance_m": row.get("distance_m") if geo_applied else None,
     }
 
 
-def _build_candidates(rows: list[dict]) -> list[dict]:
+def _build_candidates(rows: list[dict], geo_applied: bool) -> list[dict]:
     candidates: list[dict] = []
     for row in rows:
         payload = row.get("payload") or {}
@@ -215,10 +186,11 @@ def _build_candidates(rows: list[dict]) -> list[dict]:
                 "category": row.get("category"),
                 "class_path": row.get("class_path"),
                 "similarity": float(row.get("best_score") or 0.0),
+                "combined_score": row.get("combined_score") if geo_applied else None,
                 "reference_hits": int(row.get("hit_count") or 0),
                 "description": payload.get("description"),
                 "location": payload.get("location"),
-                "distance_m": row.get("best_distance_m"),
+                "distance_m": row.get("distance_m") if geo_applied else None,
             }
         )
     return candidates
