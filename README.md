@@ -2,6 +2,19 @@
 
 A small Malaysia landmark and food recognition project built on top of **Meta DINOv2** (default: `facebook/dinov2-large`), **Qdrant** vector search, two **linear probe** classifiers, and a minimal **FastAPI** service.
 
+## Contents
+
+- [Overview](#overview)
+- [Key Points](#key-points)
+- [Deployment Requirements](#deployment-requirements)
+- [Data Layout](#data-layout)
+- [Local Installation](#local-installation)
+- [Project Structure](#project-structure)
+- [Operation Guides](#operation-guides)
+- [Typical Workflow](#typical-workflow)
+- [Main Outputs](#main-outputs)
+- [Notes](#notes)
+
 ## Overview
 
 ```mermaid
@@ -54,6 +67,42 @@ flowchart TB
 - The trained `.pth` files contain **classifier head weights**, not a standalone embedding backbone.
 - Retrieval still uses DINOv2 embeddings. The linear probe checkpoints provide classification outputs for the attraction and food branches.
 
+## Deployment Requirements
+
+The following specifications are minimum practical baselines for serving predictions. They assume:
+
+- one API container with one Uvicorn worker
+- low-to-moderate request volume
+- Qdrant is hosted separately
+- the server performs inference only, not model training or bulk Qdrant ingestion
+
+| Environment | CPU | RAM | GPU | Free SSD |
+|---|---:|---:|---|---:|
+| Linux UAT | 4 vCPU minimum, x86_64 | 8 GB | Optional for native CPU execution. If using the supplied Docker Compose configuration unchanged: CUDA-capable NVIDIA GPU with ≥6 GB VRAM | 20 GB |
+| Linux production | 8 vCPU minimum, x86_64 | 16 GB | CUDA-capable NVIDIA GPU with ≥8 GB VRAM; 12–16 GB preferred | 50 GB |
+| macOS UAT | Apple Silicon, 4+ CPU cores | 16 GB unified memory | Not required; current implementation runs inference on CPU | 20 GB |
+| macOS production | Apple Silicon, 8+ CPU cores | 16 GB minimum; 24 GB preferred | Not required; current implementation runs inference on CPU | 50 GB |
+
+Linux with an NVIDIA GPU is the recommended production platform. The supplied `docker-compose.yml` requests an NVIDIA GPU, so it will not run unchanged through Docker Desktop on macOS. The current device selection supports CUDA or CPU; it does not yet select Apple's Metal/MPS backend.
+
+If Qdrant is installed on the same server, add at least 2 CPU cores, 4 GB RAM, and storage appropriate for the vector collection. Training or bulk ingestion should preferably run on a separate machine with at least 32 GB RAM and 12-16 GB GPU VRAM.
+
+### Production Scaling
+
+Scale the API horizontally behind a load balancer. Run one worker in each container and assign one GPU to each container:
+
+```text
+Load Balancer
+    │
+    ├── Container 1 → 1 worker → GPU 1
+    ├── Container 2 → 1 worker → GPU 2
+    └── Container 3 → 1 worker → GPU 3
+```
+
+This prevents multiple worker processes from competing for the same GPU and keeps model memory isolated per container.
+
+The API runs with one Uvicorn worker per container. Scale by adding containers behind the load balancer rather than adding workers inside a container.
+
 ## Data Layout
 
 ```text
@@ -68,7 +117,7 @@ data/reference/
 - Attraction metadata can also be loaded from `attractions.csv`. The CSV is used to enrich payload fields such as `display_name`, `description`, and `location`.
 - The embedding step still uses only images. CSV and JSON files are metadata sources only; they do not affect the image vector itself.
 
-## Installation
+## Local Installation
 
 ```bash
 python -m venv venv
@@ -91,7 +140,7 @@ Run all commands from the repository root.
 | `scripts/pick_eval_images.py` | Copies a small evaluation sample set from `data/reference`. |
 | `temp/webui.py` | Streamlit UI for manual testing. |
 
-## Common Commands
+## Operation Guides
 
 ### Train Linear Probe Heads
 
@@ -149,7 +198,7 @@ Protected API routes:
 - `GET /api/v1/docs`
 - `GET /api/v1/openapi.json`
 
-### Run With Docker
+### Container Deployment
 
 Build the image from the repository root:
 
@@ -175,7 +224,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-The provided `docker-compose.yml` reads variables from `.env`, requests all visible NVIDIA GPUs, and starts the same API container.
+The provided `docker-compose.yml` reads variables from `.env`, requests all visible NVIDIA GPUs, and starts the same API container with one Uvicorn worker.
 
 GPU notes:
 
