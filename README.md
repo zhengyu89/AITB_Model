@@ -65,8 +65,41 @@ data/reference/
 - Each leaf directory that directly contains images is treated as one class.
 - Optional class-level metadata can be stored in `metadata.json`.
 - Optional per-image metadata can be stored in a sibling `.json` file and will be merged into the Qdrant payload during ingestion.
-- Attraction metadata can also be loaded from `attractions.csv`. The CSV is used to enrich payload fields such as `display_name`, `description`, and `location`.
+- Attraction metadata can also be loaded from `attractions.csv`. The CSV is used to enrich payload fields such as `display_name`, `description`, `area`, and `location`.
 - The embedding step still uses only images. CSV and JSON files are metadata sources only; they do not affect the image vector itself.
+
+## Area Metadata
+
+Qdrant payloads support an optional `area` string, for example `"mersing"`:
+
+```json
+{
+  "class_name": "pulau_sibu",
+  "class_path": "attraction/pulau_sibu",
+  "category": "attraction",
+  "display_name": "Pulau Sibu",
+  "area": "mersing",
+  "location": {"lat": 2.2149, "lon": 104.0531}
+}
+```
+
+To include `area` during ingestion, add an optional `area` column to the attraction CSV, or put `{"area": "mersing"}` in the class folder's `metadata.json` or an image's sibling JSON file. Metadata precedence is CSV, then class JSON, then image JSON; later sources override earlier values. Area values are preserved as supplied (CSV values have surrounding whitespace removed).
+
+Retrieval carries `area` into raw results and grouped candidates using the best-scoring reference image's payload. Both prediction endpoints (`POST /api/v1/predict/` and `POST /api/v1/predict/upload`) return it in `final_match.area` and each `candidates[].area`, for example:
+
+```json
+{
+  "name": "Pulau Sibu",
+  "category": "attraction",
+  "class_path": "attraction/pulau_sibu",
+  "similarity": 0.91,
+  "reference_hits": 3,
+  "area": "mersing",
+  "location": {"lat": 2.2149, "lon": 104.0531}
+}
+```
+
+Streamlit shows an Area column in its candidate and detailed retrieval tables. Existing Qdrant points with `area` work immediately; points without it return `null`. Area is descriptive metadata and does not change similarity scoring, classifier outputs, or GPS distance ranking.
 
 ## Installation
 

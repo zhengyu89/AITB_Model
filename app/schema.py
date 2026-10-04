@@ -24,6 +24,7 @@ class MatchResult(BaseModel):
     class_path: str | None = Field(default=None, description="Internal class path used by the reference dataset.")
     similarity: float = Field(..., description="Best grouped Qdrant similarity score.")
     reference_hits: int = Field(..., description="Number of reference images grouped into this final match.")
+    area: str | None = Field(default=None, description="Area loaded from Qdrant payload, such as mersing.")
     description: str | None = Field(default=None, description="Human-readable description loaded from Qdrant payload.")
     location: GeoLocation | None = Field(
         default=None,
@@ -42,6 +43,7 @@ class CandidateResult(BaseModel):
     class_path: str | None = Field(default=None, description="Internal class path for this candidate.")
     similarity: float = Field(..., description="Grouped similarity score for this candidate.")
     reference_hits: int = Field(..., description="Number of grouped reference images for this candidate.")
+    area: str | None = Field(default=None, description="Area loaded from Qdrant payload, such as mersing.")
     description: str | None = Field(default=None, description="Description loaded from Qdrant payload.")
     location: GeoLocation | None = Field(
         default=None,

@@ -39,6 +39,7 @@ def qdrant_topk(
                 "class_path": payload.get("class_path"),
                 "image_path": payload.get("image_path"),
                 "category": payload.get("category"),
+                "area": payload.get("area"),
                 "payload": payload,
             }
         )
@@ -127,6 +128,7 @@ def aggregate_qdrant_results(rows: list[dict]) -> list[dict]:
     )
     for item in items:
         payload = item.get("payload") or {}
+        item["area"] = payload.get("area")
         item["description"] = payload.get("description")
         item["location"] = payload.get("location")
     return items

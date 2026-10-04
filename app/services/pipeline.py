@@ -199,6 +199,7 @@ def _build_final_match(decision: dict) -> dict | None:
         "similarity": float(decision["score"]),
         "reference_hits": int(decision["hit_count"]),
         "description": payload.get("description"),
+        "area": payload.get("area"),
         "location": payload.get("location"),
         "image_path": row.get("best_image_path"),
         "distance_m": row.get("best_distance_m"),
@@ -217,6 +218,7 @@ def _build_candidates(rows: list[dict]) -> list[dict]:
                 "similarity": float(row.get("best_score") or 0.0),
                 "reference_hits": int(row.get("hit_count") or 0),
                 "description": payload.get("description"),
+                "area": payload.get("area"),
                 "location": payload.get("location"),
                 "distance_m": row.get("best_distance_m"),
             }
