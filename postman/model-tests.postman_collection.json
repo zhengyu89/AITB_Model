@@ -1,0 +1,393 @@
+{
+  "info": {
+    "name": "Malaysia Vision \u2014 Model Smoke Tests",
+    "description": "Checks model startup, both classifier heads, DINOv2 embedding metadata, Qdrant retrieval consistency, multipart uploads, and input validation. Run in order. Synthetic fixture proves execution, not accuracy. No standalone embedding endpoint exists; embedding checks use the prediction pipeline. Set api_key if API_KEY is enabled.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "topk",
+      "value": "5",
+      "type": "string"
+    },
+    {
+      "key": "expected_embedding_model",
+      "value": "facebook/dinov2-large",
+      "type": "string"
+    },
+    {
+      "key": "expected_embedding_dim",
+      "value": "1024",
+      "type": "string"
+    },
+    {
+      "key": "image_base64",
+      "value": "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",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Health \u2014 models preloaded",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": "{{base_url}}/health",
+        "description": ""
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Healthy\", () => pm.expect(pm.response.json().status).to.equal(\"ok\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Base64 \u2014 image classifiers + embedding",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/predict/",
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image_base64\": \"{{image_base64}}\",\n  \"topk\": {{topk}},\n  \"include_classification\": true,\n  \"include_debug\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "pm.test(\"Prediction response is valid\", () => {",
+              "    pm.expect(data.status).to.be.oneOf([\"accept\", \"tentative\", \"reject\"]);",
+              "    pm.expect(data.retrieval_scope).to.equal(\"global\");",
+              "    pm.expect(data.candidates).to.be.an(\"array\");",
+              "    pm.expect(data.candidates.length).to.be.at.most(Number(pm.variables.get(\"topk\")));",
+              "    data.candidates.forEach(c => {",
+              "        pm.expect(Number.isFinite(c.similarity)).to.equal(true);",
+              "        pm.expect(c.reference_hits).to.be.at.least(1);",
+              "    });",
+              "    if (data.status === \"reject\") pm.expect(data.final_match).to.equal(null);",
+              "    else pm.expect(data.final_match).to.be.an(\"object\");",
+              "});",
+              "pm.test(\"Embedding model ran with expected dimensions\", () => {",
+              "    pm.expect(data.debug).to.be.an(\"object\");",
+              "    pm.expect(data.debug.embedding_model).to.equal(pm.variables.get(\"expected_embedding_model\"));",
+              "    pm.expect(data.debug.embedding_dim).to.equal(Number(pm.variables.get(\"expected_embedding_dim\")));",
+              "    pm.expect(data.debug.device).to.be.oneOf([\"cpu\", \"cuda\"]);",
+              "});",
+              "pm.test(\"Qdrant contains reference candidates\", () => {",
+              "    pm.expect(data.candidates.length, \"Ingest reference images into the configured Qdrant collection\").to.be.above(0);",
+              "});",
+              "pm.test(\"Both image classifier heads ran\", () => {",
+              "    pm.expect(data.classification).to.be.an(\"object\");",
+              "    [\"attraction_top1\", \"food_top1\"].forEach(key => {",
+              "        const result = data.classification[key];",
+              "        pm.expect(result, key).to.be.an(\"object\");",
+              "        pm.expect(result.class_path).to.be.a(\"string\").and.not.empty;",
+              "        pm.expect(Number.isFinite(result.probability)).to.equal(true);",
+              "        pm.expect(result.probability).to.be.within(0, 1);",
+              "    });",
+              "});",
+              "pm.collectionVariables.set(\"baseline_prediction\", JSON.stringify({image: pm.variables.get(\"image_base64\"), topk: pm.variables.get(\"topk\"), candidates: data.candidates}));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Base64 \u2014 embedding retrieval without classification",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/predict/",
+        "description": "Uses the same image as request 02. Run in order against unchanged reference data. A 500 can indicate Qdrant failure even when the embedding model works.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image_base64\": \"{{image_base64}}\",\n  \"topk\": {{topk}},\n  \"include_classification\": false,\n  \"include_debug\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "pm.test(\"Prediction response is valid\", () => {",
+              "    pm.expect(data.status).to.be.oneOf([\"accept\", \"tentative\", \"reject\"]);",
+              "    pm.expect(data.retrieval_scope).to.equal(\"global\");",
+              "    pm.expect(data.candidates).to.be.an(\"array\");",
+              "    pm.expect(data.candidates.length).to.be.at.most(Number(pm.variables.get(\"topk\")));",
+              "    data.candidates.forEach(c => {",
+              "        pm.expect(Number.isFinite(c.similarity)).to.equal(true);",
+              "        pm.expect(c.reference_hits).to.be.at.least(1);",
+              "    });",
+              "    if (data.status === \"reject\") pm.expect(data.final_match).to.equal(null);",
+              "    else pm.expect(data.final_match).to.be.an(\"object\");",
+              "});",
+              "pm.test(\"Embedding model ran with expected dimensions\", () => {",
+              "    pm.expect(data.debug).to.be.an(\"object\");",
+              "    pm.expect(data.debug.embedding_model).to.equal(pm.variables.get(\"expected_embedding_model\"));",
+              "    pm.expect(data.debug.embedding_dim).to.equal(Number(pm.variables.get(\"expected_embedding_dim\")));",
+              "    pm.expect(data.debug.device).to.be.oneOf([\"cpu\", \"cuda\"]);",
+              "});",
+              "pm.test(\"Qdrant contains reference candidates\", () => {",
+              "    pm.expect(data.candidates.length, \"Ingest reference images into the configured Qdrant collection\").to.be.above(0);",
+              "});",
+              "pm.test(\"Classification disabled\", () => pm.expect(data.classification).to.equal(null));",
+              "pm.test(\"Retrieval matches the same image with classification enabled\", () => {",
+              "    const saved = pm.collectionVariables.get(\"baseline_prediction\");",
+              "    pm.expect(saved, \"Run request 02 before request 03\").to.be.a(\"string\");",
+              "    const baseline = JSON.parse(saved);",
+              "    pm.expect(baseline.image).to.equal(pm.variables.get(\"image_base64\"));",
+              "    pm.expect(baseline.topk).to.equal(pm.variables.get(\"topk\"));",
+              "    pm.expect(data.candidates.length).to.equal(baseline.candidates.length);",
+              "    data.candidates.forEach((candidate, i) => {",
+              "        pm.expect(candidate.class_path).to.equal(baseline.candidates[i].class_path);",
+              "        pm.expect(candidate.similarity).to.be.closeTo(baseline.candidates[i].similarity, 0.00001);",
+              "    });",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Upload \u2014 image classifiers + embedding",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/predict/upload?topk={{topk}}&include_classification=true&include_debug=true",
+        "description": "Select a local JPG/PNG/WebP in Body > form-data > file. The supplied image is synthetic and only checks execution. Let Postman set the multipart Content-Type.",
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "postman/smoke-image.png"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const data = pm.response.json();",
+              "pm.test(\"Prediction response is valid\", () => {",
+              "    pm.expect(data.status).to.be.oneOf([\"accept\", \"tentative\", \"reject\"]);",
+              "    pm.expect(data.retrieval_scope).to.equal(\"global\");",
+              "    pm.expect(data.candidates).to.be.an(\"array\");",
+              "    pm.expect(data.candidates.length).to.be.at.most(Number(pm.variables.get(\"topk\")));",
+              "    data.candidates.forEach(c => {",
+              "        pm.expect(Number.isFinite(c.similarity)).to.equal(true);",
+              "        pm.expect(c.reference_hits).to.be.at.least(1);",
+              "    });",
+              "    if (data.status === \"reject\") pm.expect(data.final_match).to.equal(null);",
+              "    else pm.expect(data.final_match).to.be.an(\"object\");",
+              "});",
+              "pm.test(\"Embedding model ran with expected dimensions\", () => {",
+              "    pm.expect(data.debug).to.be.an(\"object\");",
+              "    pm.expect(data.debug.embedding_model).to.equal(pm.variables.get(\"expected_embedding_model\"));",
+              "    pm.expect(data.debug.embedding_dim).to.equal(Number(pm.variables.get(\"expected_embedding_dim\")));",
+              "    pm.expect(data.debug.device).to.be.oneOf([\"cpu\", \"cuda\"]);",
+              "});",
+              "pm.test(\"Qdrant contains reference candidates\", () => {",
+              "    pm.expect(data.candidates.length, \"Ingest reference images into the configured Qdrant collection\").to.be.above(0);",
+              "});",
+              "pm.test(\"Both image classifier heads ran\", () => {",
+              "    pm.expect(data.classification).to.be.an(\"object\");",
+              "    [\"attraction_top1\", \"food_top1\"].forEach(key => {",
+              "        const result = data.classification[key];",
+              "        pm.expect(result, key).to.be.an(\"object\");",
+              "        pm.expect(result.class_path).to.be.a(\"string\").and.not.empty;",
+              "        pm.expect(Number.isFinite(result.probability)).to.equal(true);",
+              "        pm.expect(result.probability).to.be.within(0, 1);",
+              "    });",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Invalid base64 \u2014 rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/predict/",
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image_base64\": \"not-an-image\",\n  \"topk\": {{topk}},\n  \"include_classification\": true,\n  \"include_debug\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid image returns 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"Error detail present\", () => pm.expect(pm.response.json().detail).to.include(\"Invalid image_base64\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Invalid topk \u2014 rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/predict/",
+        "description": "",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image_base64\": \"{{image_base64}}\",\n  \"topk\": 0,\n  \"include_classification\": true,\n  \"include_debug\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid topk returns 422\", () => pm.response.to.have.status(422));",
+              "pm.test(\"topk validation error\", () => pm.expect(pm.response.json().detail.some(e => e.loc.includes(\"topk\"))).to.equal(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Missing upload \u2014 rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-API-KEY",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/predict/upload",
+        "description": ""
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Missing file returns 422\", () => pm.response.to.have.status(422));",
+              "pm.test(\"file validation error\", () => pm.expect(pm.response.json().detail.some(e => e.loc.includes(\"file\"))).to.equal(true));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

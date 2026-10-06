@@ -18,7 +18,7 @@ class DinoV2Embedder:
             from transformers import AutoImageProcessor, AutoModel
         except ImportError as exc:
             raise SystemExit(
-                "transformers is not installed. Run `./venv/bin/pip install -r requirements.txt` first."
+                "transformers is not installed. Run `uv sync --locked` first."
             ) from exc
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"

@@ -104,11 +104,12 @@ Streamlit shows an Area column in its candidate and detailed retrieval tables. E
 ## Installation
 
 ```bash
-python -m venv venv
-./venv/bin/pip install -r requirements.txt
+uv venv --python 3.12
+uv sync --locked
+source .venv/bin/activate
 ```
 
-Run all commands from the repository root.
+Run all commands from the repository root. Install `uv` first. Dependencies are defined in `pyproject.toml` and pinned in `uv.lock`; `requirements.txt` is exported from the lockfile for pip compatibility. After changing dependencies with `uv add`, refresh it with `uv export --locked --no-hashes --no-emit-project -o requirements.txt`.
 
 ## Project Structure
 
@@ -161,7 +162,7 @@ Make sure the same DINO backbone is used everywhere:
 ### Run FastAPI
 
 ```bash
-uvicorn app.main:app --reload
+uv run --locked uvicorn app.main:app --reload
 ```
 
 Or use the short launcher from the repo root:
@@ -239,7 +240,7 @@ docker compose run --rm api python scripts/ingest_images_to_qdrant.py --rebuild
 ### Run Streamlit
 
 ```bash
-./venv/bin/streamlit run temp/webui.py
+uv run --locked streamlit run temp/webui.py
 ```
 
 ### Build a Small Eval Set
@@ -271,3 +272,7 @@ python scripts/pick_eval_images.py --per-class 2 --seed 42
 - If you ever want the trained model itself to produce retrieval embeddings, that would require a different training strategy such as backbone fine-tuning or metric learning.
 - GPS-aware lookup now uses `location: {lat, lon}` to compute candidate distance and prefer the nearest recognized result when coordinates are available.
 - New ingested points store a dedicated `location` object. Radius-based filtering is no longer used.
+
+## Postman model tests
+
+Import [the model test collection](postman/model-tests.postman_collection.json) to check both image classifier heads, embedding retrieval, uploads, and input validation. See [Postman setup instructions](postman/README.md) for variables and the included smoke image.
