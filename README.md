@@ -179,8 +179,11 @@ Protected API routes:
 - `GET /api/v1/`
 - `POST /api/v1/predict/`
 - `POST /api/v1/predict/upload`
+- `POST /api/v1/embed/upload`
 - `GET /api/v1/docs`
 - `GET /api/v1/openapi.json`
+
+`POST /api/v1/embed/upload` returns just the DINOv2 embedding vector for an uploaded image (`{embedding, dim, model}`) — no Qdrant read or write happens here. It's used by AI-Travel-Buddy's knowledge-base image sync (`app/services/embedding_service.py` there), which already has the area/place/description context from the Laravel admin panel and performs the `image_attraction` upsert itself after calling this endpoint. Reuses the same cached `DinoV2Embedder` instance (`app/services/pipeline.py`'s `get_prediction_bundle()`) as the prediction endpoints, so it adds no extra model-loading cost.
 
 ### Run With Docker
 
