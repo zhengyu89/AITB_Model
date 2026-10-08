@@ -22,7 +22,7 @@ try:
     import albumentations as A
 except ImportError as exc:
     raise SystemExit(
-        "albumentations is not installed. Run `./venv/bin/pip install -r requirements.txt` first."
+        "albumentations is not installed. Run `uv sync --locked` first."
     ) from exc
 
 

@@ -21,3 +21,5 @@ data/train/
 
 docker/*.log
 *.log
+
+.uv-cache/
