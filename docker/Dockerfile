@@ -1,25 +1,22 @@
 # Use lightweight Python base image
 FROM python:3.12-slim
+COPY --from=ghcr.io/astral-sh/uv:0.12.23 /uv /uvx /usr/local/bin/
 
 # Set build arguments
 ARG UID=1000
 ARG GID=1000
 ARG APP_PORT=8000
 
-# Set environment variables for Python and Pip
+# Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=on \
-    PIP_DEFAULT_TIMEOUT=100 \
     PATH="/app/.venv/bin:$PATH"
 
-# Install system dependencies and upgrade Pip
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     libgomp1 \
-    && rm -rf /var/lib/apt/lists/* \
-    && python -m venv /app/.venv \
-    && /app/.venv/bin/pip install --no-cache-dir --upgrade pip
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN groupadd --force -g ${GID} appuser \
@@ -30,10 +27,10 @@ WORKDIR /app
 RUN chown -R ${UID}:${GID} /app
 
 # Copy only dependency files
-COPY --chown=${UID}:${GID} requirements.txt ./
+COPY --chown=${UID}:${GID} pyproject.toml uv.lock .python-version ./
 
 # Install dependencies
-RUN /app/.venv/bin/pip install --no-cache-dir -r requirements.txt
+RUN uv sync --locked --no-cache --no-dev --no-install-project
 
 # Copy application code and entrypoint script
 COPY --chown=${UID}:${GID} . /app

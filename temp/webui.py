@@ -203,6 +203,7 @@ def _candidate_table(rows: list[dict]) -> pd.DataFrame:
             {
                 "Name": row["display_name"],
                 "Type": _bucket_zh(row.get("category")),
+                "Area": row.get("area"),
                 "Similarity": f"{float(row['best_score']):.4f}",
             }
         )
@@ -431,12 +432,13 @@ def main() -> None:
                         "display_name": "Display Name",
                         "class_path": "Class Path",
                         "category": "Bucket",
+                        "area": "Area",
                         "best_score": "Best Similarity",
                         "total_score": "Total Similarity",
                         "hit_count": "Hit Count",
                     }
                 )
-                cols = [c for c in ["Display Name", "Bucket", "Class Path", "Best Similarity", "Total Similarity", "Hit Count"] if c in df.columns]
+                cols = [c for c in ["Display Name", "Bucket", "Area", "Class Path", "Best Similarity", "Total Similarity", "Hit Count"] if c in df.columns]
                 st.dataframe(df[cols], use_container_width=True, hide_index=True)
 
 

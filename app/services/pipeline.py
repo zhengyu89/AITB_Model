@@ -170,6 +170,7 @@ def _build_final_match(decision: dict, geo_applied: bool) -> dict | None:
         "similarity": float(decision["score"]),
         "reference_hits": int(decision["hit_count"]),
         "description": payload.get("description"),
+        "area": payload.get("area"),
         "location": payload.get("location"),
         "image_path": row.get("best_image_path"),
         "distance_m": row.get("distance_m") if geo_applied else None,
@@ -189,6 +190,7 @@ def _build_candidates(rows: list[dict], geo_applied: bool) -> list[dict]:
                 "combined_score": row.get("combined_score") if geo_applied else None,
                 "reference_hits": int(row.get("hit_count") or 0),
                 "description": payload.get("description"),
+                "area": payload.get("area"),
                 "location": payload.get("location"),
                 "distance_m": row.get("distance_m") if geo_applied else None,
             }

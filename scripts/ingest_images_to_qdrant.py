@@ -100,6 +100,7 @@ def load_attraction_metadata(csv_path: Path) -> dict[str, dict]:
             payload = {
                 "display_name": name,
                 "description": (row.get("description") or "").strip() or None,
+                "area": (row.get("area") or "").strip() or None,
                 "lat": lat,
                 "lon": lon,
             }
@@ -139,6 +140,7 @@ def collect_points(data_dir: Path, attraction_csv: Path):
                 "category": category,
                 "display_name": display_name,
                 "description": csv_meta.get("description"),
+                "area": csv_meta.get("area"),
                 "location": csv_meta.get("location"),
             }
             payload.update(class_meta)
